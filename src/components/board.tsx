@@ -23,7 +23,7 @@ export function Board({ positions }: BoardProps) {
   }
 
   return (
-    <div className="board-responsive grid grid-cols-10 gap-px bg-[var(--color-board-border)] rounded-[var(--radius-board)] overflow-hidden shadow-[var(--shadow-glass)]">
+    <div className="board-responsive grid grid-cols-10 gap-px bg-[var(--color-board-border)] rounded-[var(--radius-board)] overflow-hidden shadow-[var(--shadow-board)]">
       {cells.map((row, rowIdx) =>
         row.map((num, colIdx) => {
           const isLight = (rowIdx + colIdx) % 2 === 0
@@ -36,14 +36,17 @@ export function Board({ positions }: BoardProps) {
           const p1Here = positions[0].col === boardCol && positions[0].row === boardRow
           const p2Here = positions[1].col === boardCol && positions[1].row === boardRow
 
+          const baseBg = isLight ? 'bg-board-light' : 'bg-board-dark'
+          const tintClass = hasSnake
+            ? 'bg-[rgba(192,69,48,0.15)]'
+            : hasLadder
+              ? 'bg-[rgba(45,106,79,0.15)]'
+              : ''
+
           return (
             <div
               key={num}
-              className={`relative flex items-center justify-center text-[0.7rem] select-none ${
-                isLight ? 'bg-board-light' : 'bg-board-dark'
-              } ${hasSnake ? 'shadow-[inset_0_0_8px_var(--color-snake)]' : ''} ${
-                hasLadder ? 'shadow-[inset_0_0_8px_var(--color-ladder)]' : ''
-              }`}
+              className={`relative flex items-center justify-center text-[0.7rem] select-none ${baseBg} ${tintClass}`}
               aria-label={
                 hasSnake
                   ? `Snake: slide to ${SNAKES[num]}`
@@ -52,7 +55,7 @@ export function Board({ positions }: BoardProps) {
                     : undefined
               }
             >
-              <span className="absolute top-0.5 left-1 text-[0.6rem] font-bold text-text-muted">
+              <span className="absolute top-0.5 left-1 text-[0.6rem] font-bold text-text-cell">
                 {num}
               </span>
 
@@ -69,12 +72,12 @@ export function Board({ positions }: BoardProps) {
 
               <div className="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none">
                 {p1Here && (
-                  <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-1 text-[0.7rem] font-bold text-white shadow-[0_0_8px_var(--color-player-1),0_0_16px_var(--color-player-1)] z-10">
+                  <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10">
                     1
                   </span>
                 )}
                 {p2Here && (
-                  <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-2 text-[0.7rem] font-bold text-white shadow-[0_0_8px_var(--color-player-2),0_0_16px_var(--color-player-2)] z-10">
+                  <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10">
                     2
                   </span>
                 )}

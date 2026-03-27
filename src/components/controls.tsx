@@ -11,26 +11,33 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
   const { positions, currentPlayer, dice, message, isRolling, gameOver } = state
 
   const playerColor = currentPlayer === 0 ? 'var(--color-player-1)' : 'var(--color-player-2)'
+  const playerTint =
+    currentPlayer === 0 ? 'bg-[rgba(155,35,53,0.08)]' : 'bg-[rgba(44,74,124,0.08)]'
+
+  const messageColor = gameOver
+    ? 'text-success font-bold'
+    : message.includes('Snake!')
+      ? 'text-snake'
+      : message.includes('Ladder!')
+        ? 'text-ladder'
+        : 'text-text-secondary'
 
   return (
-    <div className="glass-panel flex flex-col gap-4 p-5 w-full md:min-w-[280px] md:w-[280px]">
+    <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[280px] md:w-[280px]">
       {/* Current player */}
       <div
-        className="text-lg font-bold px-4 py-3 rounded-lg bg-[rgba(255,255,255,0.04)]"
-        style={{
-          borderLeft: `3px solid ${playerColor}`,
-          textShadow: `0 0 8px ${playerColor}`,
-        }}
+        className={`text-lg font-bold px-4 py-3 rounded-lg text-text ${playerTint}`}
+        style={{ borderLeft: `3px solid ${playerColor}` }}
       >
         {gameOver ? `Player ${currentPlayer + 1} wins!` : `Player ${currentPlayer + 1}'s Turn`}
       </div>
 
       {/* Player positions */}
       <div className="flex justify-center gap-3">
-        <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-1 text-sm font-bold text-white">
+        <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-1 text-sm font-bold text-text-inverse">
           P1: ({positions[0].col}, {positions[0].row})
         </span>
-        <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-2 text-sm font-bold text-white">
+        <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-2 text-sm font-bold text-text-inverse">
           P2: ({positions[1].col}, {positions[1].row})
         </span>
       </div>
@@ -48,7 +55,7 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
 
       {/* Roll button */}
       <button
-        className="py-3 px-8 text-[0.875rem] font-bold text-white rounded-[var(--radius-button)] bg-linear-to-br from-[#c4006e] to-[#0098a8] shadow-[var(--shadow-neon-pink)] cursor-pointer transition-all duration-150 hover:translate-y-[-2px] hover:shadow-[0_0_30px_rgba(255,45,149,0.6)] active:translate-y-0 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0"
+        className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] bg-player-1 cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
         onClick={onRoll}
         disabled={isRolling || gameOver}
       >
@@ -57,20 +64,14 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
 
       {/* Reset button */}
       <button
-        className="py-2 px-6 text-sm text-white rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-glass-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-glass-hover)]"
+        className="py-2 px-6 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
         onClick={onReset}
       >
         New Game
       </button>
 
       {/* Message */}
-      <div
-        className="text-sm h-12 px-2 py-1 text-center leading-relaxed"
-        style={{
-          color: message ? (gameOver ? 'var(--color-success)' : 'var(--color-neon-yellow)') : 'transparent',
-          textShadow: message ? `0 0 8px ${gameOver ? 'var(--color-success)' : 'var(--color-neon-yellow)'}` : 'none',
-        }}
-      >
+      <div className={`text-sm h-12 px-2 py-1 text-center leading-relaxed ${messageColor}`}>
         {message || '\u00A0'}
       </div>
     </div>

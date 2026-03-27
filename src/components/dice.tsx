@@ -21,10 +21,9 @@ export function Dice({ value, rolling }: DiceProps) {
     <div
       className={`w-16 h-16 lg:w-[4.5rem] lg:h-[4.5rem] rounded-xl grid grid-cols-3 grid-rows-3 p-2 gap-0.5 select-none ${rolling ? 'animate-dice-roll' : ''}`}
       style={{
-        background: 'linear-gradient(145deg, #2a2050, #1a1040)',
-        border: '1px solid rgba(255, 255, 255, 0.15)',
-        boxShadow:
-          '0 0 12px var(--color-neon-yellow), inset 0 1px 1px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.4)',
+        background: 'linear-gradient(145deg, #e8d5b0, #d4c0a0)',
+        border: '1px solid var(--color-board-border)',
+        boxShadow: '0 2px 6px rgba(58, 50, 38, 0.2)',
       }}
     >
       {Array.from({ length: 9 }, (_, i) => (
@@ -33,8 +32,8 @@ export function Dice({ value, rolling }: DiceProps) {
             <div
               className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full"
               style={{
-                background: 'radial-gradient(circle at 35% 35%, #fff, #e0e0e0)',
-                boxShadow: '0 0 4px rgba(255, 225, 86, 0.6), inset 0 -1px 2px rgba(0,0,0,0.2)',
+                background: 'radial-gradient(circle at 35% 35%, #5a4a3a, #3a3226)',
+                boxShadow: '0 0.5px 1px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.2)',
               }}
             />
           )}

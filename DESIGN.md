@@ -1,7 +1,7 @@
 # DESIGN.md — Snake & Ladder
 
-> **Neon Arcade** — 80s arcade neon palette meets glassmorphism UI.
-> A retro board game with frosted glass panels, built as a developer portfolio piece.
+> **Craft Board** — A warm, tactile board game that feels like it's sitting on your table.
+> No glowing orbs, no neon, no glass. Just wood, paper, and good typography.
 
 ---
 
@@ -9,13 +9,14 @@
 
 ### Concept
 
-Neon color palette inspired by 80s arcade games layered over a CRT scanline texture.
-Glassmorphism (frosted glass) panels float over an animated gradient background with
-subtle noise and color-shifting orbs, giving the glass surfaces visible content to blur.
+A physical board game brought to screen. Warm wood tones, paper-card UI panels,
+and muted jewel-tone accents. The design recedes so the game itself is the focus.
+Every surface has a material reference: the board is wood, the panel is cardstock,
+the tokens are painted wooden pieces.
 
 ### Mood Keywords
 
-`neon` · `arcade` · `glassmorphism` · `glow` · `dark`
+`craft` · `tabletop` · `warm` · `tactile` · `analog`
 
 ### Target
 
@@ -25,9 +26,8 @@ subtle noise and color-shifting orbs, giving the glass surfaces visible content 
 ### Accessibility
 
 - WCAG 2.2 AA compliant
-- Minimum contrast ratio: 4.5:1 (body text), 3:1 (large text / UI elements)
-- Neon glow effects are decorative only — information is never conveyed by color alone
-- Snake/ladder cells must include `aria-label` describing the effect (e.g. "Snake: slide to 12")
+- Minimum contrast ratio: 4.5:1 (body text), 3:1 (large text / UI)
+- Snake/ladder cells include `aria-label`
 - `prefers-reduced-motion` support required
 
 ---
@@ -38,52 +38,38 @@ subtle noise and color-shifting orbs, giving the glass surfaces visible content 
 
 | Token | Value | Role |
 |---|---|---|
-| `--color-bg-deep` | `#0a0a1a` | Base background (void) |
-| `--color-bg-surface` | `rgba(30, 20, 60, 0.7)` | Translucent surface layer |
-| `--color-bg-gradient-start` | `#0f0c29` | Background gradient start |
-| `--color-bg-gradient-mid` | `#302b63` | Background gradient mid |
-| `--color-bg-gradient-end` | `#24243e` | Background gradient end |
-
-### Neon Accents
-
-| Token | Value | Role | AA on `#0a0a1a` |
-|---|---|---|---|
-| `--color-neon-pink` | `#ff2d95` | Primary accent, Player 1 | 5.2:1 |
-| `--color-neon-cyan` | `#00f0ff` | Secondary accent, Player 2 | 8.6:1 |
-| `--color-neon-yellow` | `#ffe156` | Highlight, ladder indicator | 12.1:1 |
-| `--color-neon-green` | `#39ff14` | Success state, advance | 9.8:1 |
-| `--color-neon-red` | `#ff3131` | Danger state, snake indicator | 4.6:1 |
+| `--color-bg` | `#f4ece0` | Page background (warm linen) |
+| `--color-surface` | `#faf6f0` | Card / panel surface |
+| `--color-surface-hover` | `#f0e9dd` | Card hover state |
+| `--color-border` | `#d4c5a9` | Card borders, dividers |
+| `--color-border-subtle` | `#e5ddd0` | Subtle separators |
 
 ### Board Colors
 
 | Token | Value | Role |
 |---|---|---|
-| `--color-board-light` | `#2a1f4e` | Board light cell |
-| `--color-board-dark` | `#1a1235` | Board dark cell |
-| `--color-board-border` | `rgba(255, 255, 255, 0.06)` | Cell border |
+| `--color-board-light` | `#e8d5b0` | Light cell (maple) |
+| `--color-board-dark` | `#b8935a` | Dark cell (walnut) |
+| `--color-board-border` | `#a07d4a` | Cell separator |
 
-### Glass Surface
+### Game Accents
+
+| Token | Value | Role | AA on `#f4ece0` |
+|---|---|---|---|
+| `--color-snake` | `#c04530` | Snake — terracotta red | 4.8:1 |
+| `--color-ladder` | `#2d6a4f` | Ladder — forest green | 5.6:1 |
+| `--color-player-1` | `#9b2335` | Player 1 — deep crimson | 6.2:1 |
+| `--color-player-2` | `#2c4a7c` | Player 2 — navy | 5.4:1 |
+| `--color-success` | `#2d6a4f` | Win state (same as ladder) | 5.6:1 |
+
+### Text Colors
 
 | Token | Value | Role |
 |---|---|---|
-| `--color-glass` | `rgba(255, 255, 255, 0.06)` | Glass background |
-| `--color-glass-hover` | `rgba(255, 255, 255, 0.10)` | Glass hover state |
-| `--color-glass-border` | `rgba(255, 255, 255, 0.12)` | Glass border |
-| `--blur-glass` | `12px` | backdrop-filter blur |
-| `--shadow-glass` | `0 8px 32px rgba(0, 0, 0, 0.4)` | Glass drop shadow |
-
-### Semantic Colors
-
-| Token | Value | Role |
-|---|---|---|
-| `--color-text-primary` | `#f0f0f0` | Primary text |
-| `--color-text-secondary` | `rgba(240, 240, 240, 0.65)` | Secondary text |
-| `--color-text-muted` | `rgba(240, 240, 240, 0.55)` | Muted text (cell numbers) — 4.6:1 on `#0a0a1a`, 4.5:1 on `#1a1235` |
-| `--color-player-1` | `var(--color-neon-pink)` | Player 1 |
-| `--color-player-2` | `var(--color-neon-cyan)` | Player 2 |
-| `--color-snake` | `var(--color-neon-red)` | Snake indicator |
-| `--color-ladder` | `var(--color-neon-yellow)` | Ladder indicator |
-| `--color-success` | `var(--color-neon-green)` | Win / success |
+| `--color-text` | `#3a3226` | Primary text (charcoal brown) |
+| `--color-text-secondary` | `#7a6f60` | Secondary / muted text |
+| `--color-text-inverse` | `#faf6f0` | Text on dark backgrounds |
+| `--color-text-cell` | `#8a7e6e` | Board cell numbers |
 
 ---
 
@@ -92,92 +78,87 @@ subtle noise and color-shifting orbs, giving the glass surfaces visible content 
 ### Font Stack
 
 ```
---font-display: 'Press Start 2P', 'Courier New', monospace;
---font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
---font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+--font-display: Georgia, 'Times New Roman', serif;
+--font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+--font-mono: ui-monospace, 'SF Mono', monospace;
 ```
 
-- **Display** (`Press Start 2P`): Game title only. Loaded from Google Fonts.
-- **Body** (`Inter`): UI text, messages, buttons. System font fallback.
-- **Mono** (`JetBrains Mono`): Coordinates, numeric displays.
+All system fonts. Zero external font loading. Instant render.
+
+- **Display** (`Georgia`): Title only. Classic serif gives "board game box" feel.
+- **Body** (system-ui): UI text, messages, buttons. Native to each OS.
+- **Mono**: Coordinates, dice values.
 
 ### Type Scale
 
 | Name | Size | Weight | Use |
 |---|---|---|---|
-| `title` | `1.5rem` / `2rem` (lg) | 400 | Game title (Press Start 2P) |
-| `heading` | `1.125rem` / `1.25rem` (lg) | 700 | Section headings |
-| `body` | `0.875rem` / `1rem` (lg) | 400 | General text, messages |
-| `caption` | `0.75rem` | 500 | Board cell numbers, coordinates |
-| `label` | `0.875rem` | 700 | Buttons, badges (meets 4.5:1 at this weight) |
+| `title` | `1.75rem` / `2.25rem` (lg) | 700 | Game title |
+| `heading` | `1.125rem` / `1.25rem` (lg) | 600 | Section headings |
+| `body` | `0.9375rem` / `1rem` (lg) | 400 | General text |
+| `caption` | `0.75rem` | 500 | Cell numbers |
+| `label` | `0.875rem` | 600 | Buttons, badges |
 
 ### Text Effects
 
-- Title: `text-shadow: 0 0 20px var(--color-neon-pink), 0 0 40px var(--color-neon-pink)`
-- Neon text: `text-shadow: 0 0 8px currentColor`
-- Body text: no shadow
+None. No text-shadow, no glow. Clean type only.
 
 ---
 
 ## 4. Layout
 
-### Background Treatment
+### Background
 
-The background must include visible content behind glass panels for glassmorphism to work:
+Single solid color `--color-bg`. No gradients, no orbs, no overlays.
 
-1. **Gradient base**: `linear-gradient(135deg, #0f0c29, #302b63, #24243e)`
-2. **Floating orbs**: 2-3 large blurred circles (`--color-neon-pink`, `--color-neon-cyan` at 15-20% opacity, 200-400px diameter) positioned with `position: absolute` and slow CSS drift animation
-3. **CRT scanlines**: repeating-linear-gradient overlay (see Section 6)
+Optional: very subtle CSS noise texture at 2-3% opacity for paper feel.
 
-This gives glass surfaces meaningful content to blur through.
+```css
+background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+```
 
 ### Responsive Breakpoints
 
 | Name | Min Width | Behavior |
 |---|---|---|
 | `mobile` | `320px` (default) | Vertical stack: board then controls |
-| `tablet` (md) | `768px` | Horizontal: board + controls side by side |
+| `tablet` (md) | `768px` | Horizontal: board + controls |
 | `desktop` (lg) | `1024px` | Wider margins, larger board |
 
 ### Board Sizing
 
-| Breakpoint | Board Size | Cell Size |
-|---|---|---|
-| mobile | `min(90vw, 360px)` | auto (grid) |
-| tablet | `420px` | `42px` |
-| desktop | `500px` | `50px` |
+| Breakpoint | Board Size |
+|---|---|
+| mobile | `min(92vw, 420px)` |
+| tablet | `520px` |
+| desktop | `600px` |
 
 ### Page Layout
 
 ```
 ┌─────────────────────────────────────┐
-│  [Title - neon glow]                │  ← top
+│                                     │  warm linen bg
+│  Snake & Ladder  (serif, centered)  │
 │                                     │
 │  ┌──────────────┐  ┌───────────┐   │
-│  │              │  │ Glass     │   │  ← md+: flex-row
-│  │  Board       │  │ Panel     │   │
-│  │  10 x 10     │  │           │   │
-│  │              │  │ - Player  │   │
-│  │              │  │ - Dice    │   │
-│  │              │  │ - Roll    │   │
-│  │              │  │ - Message │   │
+│  │  ▓░▓░▓░▓░▓░  │  │ Card     │   │  md+: flex-row
+│  │  ░▓░▓░▓░▓░▓  │  │ Panel    │   │
+│  │  wood board   │  │          │   │
+│  │  w/ texture   │  │ controls │   │
 │  └──────────────┘  └───────────┘   │
 │                                     │
 └─────────────────────────────────────┘
-       ↑ mobile: flex-col, board first
 ```
 
-### Glass Panel Recipe
+### Card Panel Recipe
 
 ```css
-/* Apply to controls panel and any overlay surfaces */
-.glass-panel {
-  background: var(--color-glass);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--color-glass-border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-glass);
+.card-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(58, 50, 38, 0.08),
+              0 1px 2px rgba(58, 50, 38, 0.06);
 }
 ```
 
@@ -188,65 +169,72 @@ This gives glass surfaces meaningful content to blur through.
 ### 5.1 Board (`board.tsx`)
 
 - 10x10 CSS Grid
-- Checkerboard pattern: `--color-board-light` / `--color-board-dark`
-- Cell borders: `1px solid var(--color-board-border)`
-- Board outer: `border-radius: 12px`, `overflow: hidden`
-- Snake cells: icon + `box-shadow: inset 0 0 8px var(--color-snake)` + `aria-label="Snake: slide to {N}"`
-- Ladder cells: icon + `box-shadow: inset 0 0 8px var(--color-ladder)` + `aria-label="Ladder: climb to {N}"`
-- Cell numbers: `caption` size, `--color-text-muted`
+- Checkerboard: `--color-board-light` (maple) / `--color-board-dark` (walnut)
+- Cell gap: `1px`, background: `--color-board-border`
+- Board outer: `border-radius: 8px`, `overflow: hidden`
+- Board shadow: `0 4px 16px rgba(58, 50, 38, 0.15)` — subtle depth
+- Snake cells: faint red tint `rgba(192, 69, 48, 0.15)` background blend
+- Ladder cells: faint green tint `rgba(45, 106, 79, 0.15)` background blend
+- Cell numbers: `caption` size, `--color-text-cell`
+- Emoji icons: keep snake/ladder emoji, positioned bottom-right
 
 ### 5.2 Player Token
 
-- Circle token: `24px` (mobile) / `28px` (desktop)
-- P1: `--color-player-1` background + neon glow shadow
-  - `box-shadow: 0 0 8px var(--color-player-1), 0 0 16px var(--color-player-1)`
-- P2: `--color-player-2` background + neon glow shadow
-  - `box-shadow: 0 0 8px var(--color-player-2), 0 0 16px var(--color-player-2)`
-- Inner number text: `#fff`, `caption` size, bold
+- Circle: `26px` (mobile) / `30px` (desktop)
+- P1: `--color-player-1` solid background
+- P2: `--color-player-2` solid background
+- Inner text: `--color-text-inverse`, bold
+- Shadow: `0 2px 4px rgba(0,0,0,0.2)` — wooden piece on table
+- Border: `2px solid rgba(255,255,255,0.3)` — painted wood edge
+- No glow. No neon. Just a solid piece with a small shadow.
 
 ### 5.3 Controls Panel (`controls.tsx`)
 
-- Glass panel (apply glass-panel recipe)
+- Card panel (card-panel recipe)
+- Padding: `1.25rem`
 - Inner layout: `flex-col`, `gap: 1rem`
-- `min-width: 220px` (desktop), `width: 100%` (mobile)
+- Width: `100%` (mobile), `280px` (desktop)
 
 ### 5.4 Current Player Display
 
-- Sub-panel inside glass
-- Player color border: `border-left: 3px solid var(--color-player-{1|2})`
-- Text: `heading` size, current player color neon glow
+- Background: very subtle player color tint (8% opacity)
+- Left border: `3px solid var(--color-player-{N})`
+- Text: `--color-text`, `heading` size
+- No glow, no text-shadow
 
 ### 5.5 Dice
 
-- Two dice displayed side by side
-- Size: `3.5rem` (mobile) / `4rem` (desktop)
-- Unicode dice characters (U+2680 ~ U+2685)
-- Glow: `text-shadow: 0 0 12px var(--color-neon-yellow)`
-- Rolling animation: rotate + scale (see Section 6)
+- Keep existing CSS 3D dice component
+- Update colors: background `linear-gradient(145deg, #e8d5b0, #d4c0a0)` (wood tone)
+- Border: `1px solid var(--color-board-border)`
+- Dots: dark brown `#5a4a3a` instead of white (wooden dice dots are traditionally dark)
+- Shadow: `0 2px 6px rgba(58, 50, 38, 0.2)` — resting on table
+- No glow. No neon-yellow box-shadow.
 
 ### 5.6 Roll Button
 
-- `padding: 0.75rem 2rem`
-- Background: `linear-gradient(135deg, #c4006e, #0098a8)` (darkened for 4.5:1 white text contrast)
-- Glow: `box-shadow: var(--shadow-neon-pink)`
-- Hover: intensified glow + `translateY(-2px)`
-- Disabled: `opacity: 0.4`, no glow, `cursor: not-allowed`
-- Disabled conditions: during dice roll animation, after game over
-- `border-radius: 8px`, `font-weight: 700`
+- Background: `--color-player-1` (solid crimson, changes to current player color)
+- Text: `--color-text-inverse`, `label` size
+- Hover: darken 10% + `translateY(-1px)` + shadow increase
+- Active: `translateY(0)`, shadow decrease
+- Disabled: `opacity: 0.5`, `cursor: not-allowed`
+- `border-radius: 8px`
+- No gradient. No glow. Solid color button.
 
 ### 5.7 Reset Button
 
-- Outline style: `border: 1.5px solid var(--color-glass-border)`
+- Outline: `1.5px solid var(--color-border)`
 - Background: `transparent`
-- Hover: `var(--color-glass-hover)`
-- During active game: shows confirmation prompt before resetting
+- Text: `--color-text-secondary`
+- Hover: `--color-surface-hover` background
 
 ### 5.8 Message Area
 
-- Snake/ladder event text: `--color-neon-yellow` + neon glow
-- Win message: `--color-success` + neon glow
-- Min height: `2rem` to prevent layout shift
-- `body` size, center aligned
+- Snake events: `--color-snake` text
+- Ladder events: `--color-ladder` text
+- Win: `--color-success` text, bold
+- No glow, no text-shadow
+- `body` size, center aligned, min-height for stability
 
 ---
 
@@ -257,64 +245,18 @@ This gives glass surfaces meaningful content to blur through.
 ```css
 @keyframes dice-roll {
   0%   { transform: rotate(0deg) scale(1); }
-  25%  { transform: rotate(90deg) scale(1.15); }
+  25%  { transform: rotate(90deg) scale(1.1); }
   50%  { transform: rotate(180deg) scale(1); }
-  75%  { transform: rotate(270deg) scale(1.15); }
+  75%  { transform: rotate(270deg) scale(1.1); }
   100% { transform: rotate(360deg) scale(1); }
 }
-/* duration: 0.4s, easing: ease-in-out */
+/* duration: 0.4s, ease-in-out */
 ```
 
-### Neon Pulse (Title)
+### That's it.
 
-```css
-@keyframes neon-pulse {
-  0%, 100% { text-shadow: 0 0 20px var(--color-neon-pink), 0 0 40px var(--color-neon-pink); }
-  50%      { text-shadow: 0 0 10px var(--color-neon-pink), 0 0 20px var(--color-neon-pink); }
-}
-/* duration: 2s, infinite */
-```
-
-### Player Move
-
-```css
-@keyframes token-move {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.3); }
-  100% { transform: scale(1); }
-}
-/* duration: 0.3s, ease-out — plays once on move */
-```
-
-### Background Orb Drift
-
-```css
-@keyframes orb-drift {
-  0%   { transform: translate(0, 0); }
-  50%  { transform: translate(30px, -20px); }
-  100% { transform: translate(0, 0); }
-}
-/* duration: 8-12s, infinite, ease-in-out */
-```
-
-### CRT Scanlines (Background Decoration)
-
-```css
-.scanlines::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-```
+No pulsing title. No drifting orbs. No CRT flicker. No token glow animation.
+The only animation is the dice roll — because it has a purpose (feedback for user action).
 
 ### Reduced Motion
 
@@ -331,82 +273,73 @@ This gives glass surfaces meaningful content to blur through.
 
 ## 7. Tailwind v4 Token Mapping
 
-Define tokens via Tailwind v4 `@theme` directive:
-
 ```css
 /* src/index.css */
 @import "tailwindcss";
 
 @theme {
   /* Background */
-  --color-bg-deep: #0a0a1a;
-  --color-bg-surface: rgba(30, 20, 60, 0.7);
-
-  /* Neon */
-  --color-neon-pink: #ff2d95;
-  --color-neon-cyan: #00f0ff;
-  --color-neon-yellow: #ffe156;
-  --color-neon-green: #39ff14;
-  --color-neon-red: #ff3131;
+  --color-bg: #f4ece0;
+  --color-surface: #faf6f0;
+  --color-surface-hover: #f0e9dd;
+  --color-border: #d4c5a9;
+  --color-border-subtle: #e5ddd0;
 
   /* Board */
-  --color-board-light: #2a1f4e;
-  --color-board-dark: #1a1235;
+  --color-board-light: #e8d5b0;
+  --color-board-dark: #b8935a;
+  --color-board-border: #a07d4a;
 
-  /* Glass */
-  --color-glass: rgba(255, 255, 255, 0.06);
-  --color-glass-hover: rgba(255, 255, 255, 0.10);
-  --color-glass-border: rgba(255, 255, 255, 0.12);
+  /* Game Accents */
+  --color-snake: #c04530;
+  --color-ladder: #2d6a4f;
+  --color-player-1: #9b2335;
+  --color-player-2: #2c4a7c;
+  --color-success: #2d6a4f;
 
   /* Text */
-  --color-text-primary: #f0f0f0;
-  --color-text-secondary: rgba(240, 240, 240, 0.65);
-  --color-text-muted: rgba(240, 240, 240, 0.55);
-
-  /* Semantic */
-  --color-player-1: var(--color-neon-pink);
-  --color-player-2: var(--color-neon-cyan);
-  --color-snake: var(--color-neon-red);
-  --color-ladder: var(--color-neon-yellow);
-  --color-success: var(--color-neon-green);
+  --color-text: #3a3226;
+  --color-text-secondary: #7a6f60;
+  --color-text-inverse: #faf6f0;
+  --color-text-cell: #8a7e6e;
 
   /* Font Family */
-  --font-display: 'Press Start 2P', 'Courier New', monospace;
-  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', monospace;
 
   /* Shadows */
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-neon-pink: 0 0 20px rgba(255, 45, 149, 0.4);
-  --shadow-neon-cyan: 0 0 20px rgba(0, 240, 255, 0.4);
-
-  /* Blur */
-  --blur-glass: 12px;
+  --shadow-card: 0 2px 8px rgba(58, 50, 38, 0.08), 0 1px 2px rgba(58, 50, 38, 0.06);
+  --shadow-board: 0 4px 16px rgba(58, 50, 38, 0.15);
+  --shadow-token: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-button: 0 2px 6px rgba(58, 50, 38, 0.15);
 
   /* Border Radius */
-  --radius-board: 12px;
-  --radius-panel: 16px;
+  --radius-board: 8px;
+  --radius-card: 12px;
   --radius-button: 8px;
   --radius-badge: 20px;
   --radius-token: 9999px;
+
+  /* Animations */
+  --animate-dice-roll: dice-roll 0.4s ease-in-out;
 }
 ```
 
 ---
 
-## 8. File Naming Convention
+## 8. What was removed (and why)
 
-All source files use **kebab-case**:
-
-```
-src/
-  app.tsx
-  main.tsx
-  components/
-    board.tsx
-    controls.tsx
-  hooks/
-    use-game.ts
-  constants/
-    board.ts
-```
+| Removed | Reason |
+|---|---|
+| Floating gradient orbs | AI Slop pattern #1 |
+| Glassmorphism / backdrop-filter | No content behind it, purely decorative |
+| CRT scanlines | Decoration without purpose |
+| Neon glow on everything | Kills visual hierarchy |
+| Press Start 2P font | Most cliché "retro" font choice |
+| text-shadow on all elements | Glow inflation |
+| Pink→teal gradient button | AI-default color combo |
+| neon-pulse animation | Unnecessary motion |
+| orb-drift animation | See: floating orbs |
+| 5 neon accent colors | Reduced to 4 muted, purposeful colors |
+| Google Fonts dependency | System fonts = zero load time |
