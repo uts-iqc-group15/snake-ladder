@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { CircuitDiagram } from '@/components/circuit-diagram'
 import type { LogEntry } from '@/hooks/use-game'
 
 interface QuantumLogProps {
@@ -59,7 +60,7 @@ export function QuantumLog({ logs }: QuantumLogProps) {
     <div
       className="fixed bottom-4 right-4 z-50 flex flex-col rounded-xl overflow-hidden border border-[var(--color-border)] shadow-[var(--shadow-board)]"
       style={{
-        width: 'min(420px, calc(100vw - 2rem))',
+        width: 'min(520px, calc(100vw - 2rem))',
         height: 'min(320px, 40vh)',
         background: 'var(--color-surface)',
         resize: 'both',
@@ -104,16 +105,19 @@ export function QuantumLog({ logs }: QuantumLogProps) {
               return (
                 <div key={i} className={isQasm ? 'my-1' : 'py-0.5'}>
                   {isQasm ? (
-                    <pre
-                      className="whitespace-pre-wrap px-2 py-1.5 rounded border text-[0.65rem] leading-snug"
-                      style={{
-                        background: 'rgba(160, 125, 74, 0.06)',
-                        borderColor: 'var(--color-border-subtle)',
-                        color: '#5c4a1e',
-                      }}
-                    >
-                      {log.message}
-                    </pre>
+                    <>
+                      <pre
+                        className="whitespace-pre-wrap px-2 py-1.5 rounded border text-[0.65rem] leading-snug"
+                        style={{
+                          background: 'rgba(160, 125, 74, 0.06)',
+                          borderColor: 'var(--color-border-subtle)',
+                          color: '#5c4a1e',
+                        }}
+                      >
+                        {log.message}
+                      </pre>
+                      <CircuitDiagram qasm={log.message} />
+                    </>
                   ) : (
                     <div className="flex gap-1.5">
                       <span className="text-text-secondary shrink-0">

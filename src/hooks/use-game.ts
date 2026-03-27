@@ -416,17 +416,14 @@ export function useGame() {
 
     const player = current.currentPlayer
     const currentCell = current.positions[player]
-    let targetCell = currentCell + die
-
-    if (targetCell > TOTAL_CELLS) {
-      targetCell = TOTAL_CELLS - (targetCell - TOTAL_CELLS)
-    }
+    const rawTarget = currentCell + die
+    const targetCell = Math.min(rawTarget, TOTAL_CELLS)
 
     const msg = `Rolled ${die}: cell ${currentCell} → ${targetCell}`
     const newPositions: [number, number] = [...current.positions]
     newPositions[player] = targetCell
 
-    if (targetCell === TOTAL_CELLS) {
+    if (targetCell >= TOTAL_CELLS) {
       setState((prev) => ({
         ...prev,
         positions: newPositions,
