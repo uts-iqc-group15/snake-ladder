@@ -24,6 +24,7 @@ export interface PlacedQubit {
   owner: 0 | 1
   configIndex: number
   collapsed: null | 'snake' | 'ladder' | 'interference'
+  destinationCell?: number
   entangledPartnerId?: string
 }
 
@@ -234,7 +235,7 @@ export function useGame() {
         const gameOver = newCell === TOTAL_CELLS
 
         let newQubits = prev.qubits.map((q) =>
-          q.id === qubitId ? { ...q, collapsed: outcome } : q,
+          q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
         )
         if (partnerId && partnerOutcome && partnerOutcome !== 'interference') {
           newQubits = newQubits.map((q) =>
