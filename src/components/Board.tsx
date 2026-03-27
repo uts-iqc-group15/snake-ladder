@@ -1,6 +1,5 @@
 import { BOARD_SIZE, SNAKES, LADDERS } from '@/constants/board'
 import type { Coord } from '@/constants/board'
-import styles from './Board.module.css'
 
 interface BoardProps {
   positions: [Coord, Coord]
@@ -24,7 +23,7 @@ export function Board({ positions }: BoardProps) {
   }
 
   return (
-    <div className={styles.board}>
+    <div className="board-responsive grid grid-cols-10 rounded-[var(--radius-board)] overflow-hidden shadow-[var(--shadow-glass)]">
       {cells.map((row, rowIdx) =>
         row.map((num, colIdx) => {
           const isLight = (rowIdx + colIdx) % 2 === 0
@@ -40,22 +39,45 @@ export function Board({ positions }: BoardProps) {
           return (
             <div
               key={num}
-              className={`${styles.cell} ${isLight ? styles.light : styles.dark}`}
+              className={`relative flex items-center justify-center text-[0.7rem] select-none border border-[var(--color-board-border)] ${
+                isLight ? 'bg-board-light' : 'bg-board-dark'
+              } ${hasSnake ? 'shadow-[inset_0_0_8px_var(--color-snake)]' : ''} ${
+                hasLadder ? 'shadow-[inset_0_0_8px_var(--color-ladder)]' : ''
+              }`}
+              aria-label={
+                hasSnake
+                  ? `Snake: slide to ${SNAKES[num]}`
+                  : hasLadder
+                    ? `Ladder: climb to ${LADDERS[num]}`
+                    : undefined
+              }
             >
-              <span className={styles.number}>{num}</span>
+              <span className="absolute top-0.5 left-1 text-[0.6rem] font-bold text-text-muted">
+                {num}
+              </span>
+
               {hasSnake && (
-                <span className={styles.snake} title={`Snake to ${SNAKES[num]}`}>
+                <span className="absolute bottom-0 right-0.5 text-[1.2rem]" aria-hidden="true">
                   &#x1F40D;
                 </span>
               )}
               {hasLadder && (
-                <span className={styles.ladder} title={`Ladder to ${LADDERS[num]}`}>
+                <span className="absolute bottom-0 right-0.5 text-[1.2rem]" aria-hidden="true">
                   &#x1FA9C;
                 </span>
               )}
-              <div className={styles.players}>
-                {p1Here && <span className={styles.p1}>1</span>}
-                {p2Here && <span className={styles.p2}>2</span>}
+
+              <div className="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none">
+                {p1Here && (
+                  <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-1 text-[0.7rem] font-bold text-white shadow-[0_0_8px_var(--color-player-1),0_0_16px_var(--color-player-1)] z-10">
+                    1
+                  </span>
+                )}
+                {p2Here && (
+                  <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-2 text-[0.7rem] font-bold text-white shadow-[0_0_8px_var(--color-player-2),0_0_16px_var(--color-player-2)] z-10">
+                    2
+                  </span>
+                )}
               </div>
             </div>
           )
