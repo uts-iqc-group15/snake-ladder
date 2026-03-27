@@ -1,0 +1,169 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+}
+
+.container {
+  text-align: center;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1.2rem;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.game-area {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+canvas {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 200px;
+}
+
+.current-player {
+  font-size: 1.3rem;
+  font-weight: bold;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.positions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.p1-badge,
+.p2-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.p1-badge {
+  background: #e74c3c;
+}
+
+.p2-badge {
+  background: #3498db;
+}
+
+.dice-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dice {
+  font-size: 4rem;
+  transition: transform 0.3s;
+  user-select: none;
+}
+
+.dice.rolling {
+  animation: roll 0.4s ease-in-out;
+}
+
+@keyframes roll {
+  0% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(90deg) scale(1.2); }
+  50% { transform: rotate(180deg) scale(1); }
+  75% { transform: rotate(270deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.dice-result {
+  font-size: 1.5rem;
+  font-weight: bold;
+  min-height: 2rem;
+}
+
+.roll-btn {
+  padding: 0.8rem 2rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.roll-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(245, 87, 108, 0.5);
+}
+
+.roll-btn:active {
+  transform: translateY(0);
+}
+
+.roll-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reset-btn {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.message {
+  font-size: 1rem;
+  min-height: 3rem;
+  padding: 0.5rem;
+  line-height: 1.4;
+  color: #f1c40f;
+}
+
+@media (max-width: 768px) {
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  canvas {
+    width: 90vw;
+    height: 90vw;
+    max-width: 500px;
+    max-height: 500px;
+  }
+}
