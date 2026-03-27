@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import confetti from 'canvas-confetti'
 import { Board } from '@/components/board'
 import { Controls } from '@/components/controls'
 import { Credits } from '@/components/credits'
@@ -8,6 +9,21 @@ import { useGame } from '@/hooks/use-game'
 function App() {
   const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
   const [page, setPage] = useState<'game' | 'credits'>('game')
+  const confettiFired = useRef(false)
+
+  useEffect(() => {
+    if (state.gameOver && !confettiFired.current) {
+      confettiFired.current = true
+      const end = Date.now() + 2500
+      const frame = () => {
+        confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } })
+        confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } })
+        if (Date.now() < end) requestAnimationFrame(frame)
+      }
+      frame()
+    }
+    if (!state.gameOver) confettiFired.current = false
+  }, [state.gameOver])
 
   if (page === 'credits') {
     return <Credits onBack={() => setPage('game')} />
