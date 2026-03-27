@@ -1,0 +1,29 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.title {
+  font-size: 2rem;
+  margin-bottom: 1.2rem;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.gameArea {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .gameArea {
+    flex-direction: column;
+    align-items: center;
+  }
+}
