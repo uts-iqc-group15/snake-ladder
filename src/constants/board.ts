@@ -1,29 +1,27 @@
 export const BOARD_SIZE = 10
 export const TOTAL_CELLS = BOARD_SIZE * BOARD_SIZE
 
-export const SNAKES: Record<number, number> = {
-  16: 6,
-  47: 26,
-  49: 11,
-  56: 53,
-  62: 19,
-  64: 60,
-  87: 24,
-  93: 73,
-  95: 75,
-  98: 78,
+// Qubit placement: must be at least 5 tiles from start (1) and end (100)
+export const PLACEMENT_MIN = 6
+export const PLACEMENT_MAX = 95
+
+export interface QubitConfig {
+  label: string
+  ladderProb: number
+  snakeProb: number
+  entangled: boolean
 }
 
-export const LADDERS: Record<number, number> = {
-  1: 38,
-  4: 14,
-  9: 31,
-  21: 42,
-  28: 84,
-  36: 44,
-  51: 67,
-  71: 91,
-  80: 100,
+export const QUBIT_CONFIGS: QubitConfig[] = [
+  { label: '90/10', ladderProb: 0.9, snakeProb: 0.1, entangled: false },
+  { label: '60/40', ladderProb: 0.6, snakeProb: 0.4, entangled: false },
+  { label: '40/60', ladderProb: 0.4, snakeProb: 0.6, entangled: false },
+  { label: '10/90', ladderProb: 0.1, snakeProb: 0.9, entangled: false },
+  { label: '50/50', ladderProb: 0.5, snakeProb: 0.5, entangled: true },
+]
+
+export function isValidPlacement(cell: number, occupiedCells: number[]): boolean {
+  return cell >= PLACEMENT_MIN && cell <= PLACEMENT_MAX && !occupiedCells.includes(cell)
 }
 
 // Roll → { magnitude, direction: -1 | 1 }
@@ -36,7 +34,7 @@ export const X_VECTOR_TABLE: Record<number, { magnitude: number; direction: -1 |
   6: { magnitude: 3, direction: 1 },
 }
 
-// Y_VECTOR_MATRIX[dice1 - 1][dice2 - 1] → Y magnitude
+// Y_VECTOR_MATRIX[dice1 - 1][dice2 - 1] → Y magnitude = ceil((d1+d2)/2)
 export const Y_VECTOR_MATRIX: number[][] = [
   [1, 2, 2, 3, 3, 4],
   [2, 2, 2, 3, 4, 4],
