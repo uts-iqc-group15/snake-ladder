@@ -149,21 +149,21 @@
 /* ─── Responsive Board ──────────────────────────────────── */
 
 .board-responsive {
-  width: min(90vw, 360px);
-  height: min(90vw, 360px);
+  width: min(92vw, 420px);
+  height: min(92vw, 420px);
 }
 
 @media (min-width: 768px) {
   .board-responsive {
-    width: 420px;
-    height: 420px;
+    width: 520px;
+    height: 520px;
   }
 }
 
 @media (min-width: 1024px) {
   .board-responsive {
-    width: 500px;
-    height: 500px;
+    width: 600px;
+    height: 600px;
   }
 }
 

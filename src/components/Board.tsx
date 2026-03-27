@@ -23,7 +23,7 @@ export function Board({ positions }: BoardProps) {
   }
 
   return (
-    <div className="board-responsive grid grid-cols-10 rounded-[var(--radius-board)] overflow-hidden shadow-[var(--shadow-glass)]">
+    <div className="board-responsive grid grid-cols-10 gap-px bg-[var(--color-board-border)] rounded-[var(--radius-board)] overflow-hidden shadow-[var(--shadow-glass)]">
       {cells.map((row, rowIdx) =>
         row.map((num, colIdx) => {
           const isLight = (rowIdx + colIdx) % 2 === 0
@@ -39,7 +39,7 @@ export function Board({ positions }: BoardProps) {
           return (
             <div
               key={num}
-              className={`relative flex items-center justify-center text-[0.7rem] select-none border border-[var(--color-board-border)] ${
+              className={`relative flex items-center justify-center text-[0.7rem] select-none ${
                 isLight ? 'bg-board-light' : 'bg-board-dark'
               } ${hasSnake ? 'shadow-[inset_0_0_8px_var(--color-snake)]' : ''} ${
                 hasLadder ? 'shadow-[inset_0_0_8px_var(--color-ladder)]' : ''

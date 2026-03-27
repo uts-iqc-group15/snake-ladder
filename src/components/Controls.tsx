@@ -1,6 +1,5 @@
 import type { GameState } from '@/hooks/use-game'
-
-const DICE_FACES = ['\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685']
+import { Dice } from '@/components/dice'
 
 interface ControlsProps {
   state: GameState
@@ -14,7 +13,7 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
   const playerColor = currentPlayer === 0 ? 'var(--color-player-1)' : 'var(--color-player-2)'
 
   return (
-    <div className="glass-panel flex flex-col gap-4 p-5 w-full md:min-w-[220px] md:w-auto">
+    <div className="glass-panel flex flex-col gap-4 p-5 w-full md:min-w-[280px] md:w-[280px]">
       {/* Current player */}
       <div
         className="text-lg font-bold px-4 py-3 rounded-lg bg-[rgba(255,255,255,0.04)]"
@@ -37,26 +36,14 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
       </div>
 
       {/* Dice */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex gap-2">
-          <div
-            className={`text-[3.5rem] lg:text-[4rem] select-none ${isRolling ? 'animate-dice-roll' : ''}`}
-            style={{ textShadow: '0 0 12px var(--color-neon-yellow)' }}
-          >
-            {dice ? DICE_FACES[dice[0] - 1] : '\uD83C\uDFB2'}
-          </div>
-          <div
-            className={`text-[3.5rem] lg:text-[4rem] select-none ${isRolling ? 'animate-dice-roll' : ''}`}
-            style={{ textShadow: '0 0 12px var(--color-neon-yellow)' }}
-          >
-            {dice ? DICE_FACES[dice[1] - 1] : '\uD83C\uDFB2'}
-          </div>
+      <div className="flex flex-col items-center gap-3 h-[7.5rem]">
+        <div className="flex gap-4">
+          <Dice value={dice ? dice[0] : 6} rolling={isRolling} />
+          <Dice value={dice ? dice[1] : 6} rolling={isRolling} />
         </div>
-        {dice && (
-          <div className="text-2xl font-bold font-mono text-text-secondary">
-            ({dice[0]}, {dice[1]})
-          </div>
-        )}
+        <div className="text-xl font-bold font-mono text-text-secondary h-7">
+          {dice ? `(${dice[0]}, ${dice[1]})` : '\u00A0'}
+        </div>
       </div>
 
       {/* Roll button */}
@@ -77,17 +64,15 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
       </button>
 
       {/* Message */}
-      {message && (
-        <div
-          className="text-sm min-h-8 px-2 py-1 text-center leading-relaxed"
-          style={{
-            color: gameOver ? 'var(--color-success)' : 'var(--color-neon-yellow)',
-            textShadow: `0 0 8px ${gameOver ? 'var(--color-success)' : 'var(--color-neon-yellow)'}`,
-          }}
-        >
-          {message}
-        </div>
-      )}
+      <div
+        className="text-sm h-12 px-2 py-1 text-center leading-relaxed"
+        style={{
+          color: message ? (gameOver ? 'var(--color-success)' : 'var(--color-neon-yellow)') : 'transparent',
+          textShadow: message ? `0 0 8px ${gameOver ? 'var(--color-success)' : 'var(--color-neon-yellow)'}` : 'none',
+        }}
+      >
+        {message || '\u00A0'}
+      </div>
     </div>
   )
 }
