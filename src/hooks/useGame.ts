@@ -1,19 +1,31 @@
 import { useState, useCallback } from 'react'
-import { TOTAL_CELLS, SNAKES, LADDERS } from '@/constants/board'
+import {
+  BOARD_SIZE,
+  SNAKES,
+  LADDERS,
+  X_VECTOR_TABLE,
+  Y_VECTOR_MATRIX,
+  cellToCoord,
+  coordToCell,
+  clamp,
+} from '@/constants/board'
+import type { Coord } from '@/constants/board'
 
 export interface GameState {
-  positions: [number, number]
+  positions: [Coord, Coord]
   currentPlayer: 0 | 1
-  diceValue: number | null
+  dice: [number, number] | null
   message: string
   isRolling: boolean
   gameOver: boolean
 }
 
+const START: Coord = { col: 0, row: 0 }
+
 const INITIAL_STATE: GameState = {
-  positions: [0, 0],
+  positions: [{ ...START }, { ...START }],
   currentPlayer: 0,
-  diceValue: null,
+  dice: null,
   message: '',
   isRolling: false,
   gameOver: false,
@@ -36,54 +48,60 @@ export function useGame() {
       return { ...prev, isRolling: true, message: '' }
     })
 
-    const value = rollDice()
+    const dice1 = rollDice()
+    const dice2 = rollDice()
     await sleep(400)
 
     setState((prev) => {
       if (!prev.isRolling) return prev
 
-      const newPositions: [number, number] = [...prev.positions]
       const player = prev.currentPlayer
-      const newPos = newPositions[player] + value
+      const pos = prev.positions[player]
 
-      if (newPos > TOTAL_CELLS) {
-        return {
-          ...prev,
-          diceValue: value,
-          isRolling: false,
-          message: `Need exact ${TOTAL_CELLS - newPositions[player]} to win!`,
-          currentPlayer: player === 0 ? 1 : 0,
-        }
+      const xVector = X_VECTOR_TABLE[dice1]
+      const dx = xVector.magnitude * xVector.direction
+      const dy = Y_VECTOR_MATRIX[dice1 - 1][dice2 - 1]
+
+      const newCol = clamp(pos.col + dx, 0, BOARD_SIZE - 1)
+      const newRow = clamp(pos.row + dy, 0, BOARD_SIZE - 1)
+
+      const cell = coordToCell(newCol, newRow)
+      let message = `Rolled (${dice1}, ${dice2}) → X:${dx > 0 ? '+' : ''}${dx}, Y:+${dy}`
+
+      let finalCol = newCol
+      let finalRow = newRow
+
+      if (SNAKES[cell]) {
+        const target = cellToCoord(SNAKES[cell])
+        finalCol = target.col
+        finalRow = target.row
+        message += ` | Snake! ${cell} → ${SNAKES[cell]}`
+      } else if (LADDERS[cell]) {
+        const target = cellToCoord(LADDERS[cell])
+        finalCol = target.col
+        finalRow = target.row
+        message += ` | Ladder! ${cell} → ${LADDERS[cell]}`
       }
 
-      let finalPos = newPos
-      let message = ''
+      const newPositions: [Coord, Coord] = [...prev.positions]
+      newPositions[player] = { col: finalCol, row: finalRow }
 
-      if (SNAKES[newPos]) {
-        finalPos = SNAKES[newPos]
-        message = `Snake! Slide down from ${newPos} to ${finalPos}`
-      } else if (LADDERS[newPos]) {
-        finalPos = LADDERS[newPos]
-        message = `Ladder! Climb up from ${newPos} to ${finalPos}`
-      }
-
-      newPositions[player] = finalPos
-
-      if (finalPos === TOTAL_CELLS) {
+      const finalCell = coordToCell(finalCol, finalRow)
+      if (finalCell === 100) {
         return {
           ...prev,
           positions: newPositions,
-          diceValue: value,
+          dice: [dice1, dice2] as [number, number],
           isRolling: false,
           gameOver: true,
-          message: `Player ${player + 1} wins!`,
+          message: `Player ${player + 1} wins! ${message}`,
         }
       }
 
       return {
         ...prev,
         positions: newPositions,
-        diceValue: value,
+        dice: [dice1, dice2] as [number, number],
         isRolling: false,
         message,
         currentPlayer: player === 0 ? 1 : 0,

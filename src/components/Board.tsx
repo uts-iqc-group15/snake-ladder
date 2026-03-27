@@ -1,8 +1,9 @@
 import { BOARD_SIZE, SNAKES, LADDERS } from '@/constants/board'
+import type { Coord } from '@/constants/board'
 import styles from './Board.module.css'
 
 interface BoardProps {
-  positions: [number, number]
+  positions: [Coord, Coord]
 }
 
 function getCellNumber(row: number, col: number): number {
@@ -29,8 +30,12 @@ export function Board({ positions }: BoardProps) {
           const isLight = (rowIdx + colIdx) % 2 === 0
           const hasSnake = num in SNAKES
           const hasLadder = num in LADDERS
-          const p1Here = positions[0] === num
-          const p2Here = positions[1] === num
+
+          const boardRow = BOARD_SIZE - 1 - rowIdx
+          const boardCol = colIdx
+
+          const p1Here = positions[0].col === boardCol && positions[0].row === boardRow
+          const p2Here = positions[1].col === boardCol && positions[1].row === boardRow
 
           return (
             <div

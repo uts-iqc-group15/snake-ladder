@@ -10,7 +10,7 @@ interface ControlsProps {
 }
 
 export function Controls({ state, onRoll, onReset }: ControlsProps) {
-  const { positions, currentPlayer, diceValue, message, isRolling, gameOver } = state
+  const { positions, currentPlayer, dice, message, isRolling, gameOver } = state
 
   return (
     <div className={styles.controls}>
@@ -19,15 +19,28 @@ export function Controls({ state, onRoll, onReset }: ControlsProps) {
       </div>
 
       <div className={styles.positions}>
-        <span className={styles.p1Badge}>P1: {positions[0]}</span>
-        <span className={styles.p2Badge}>P2: {positions[1]}</span>
+        <span className={styles.p1Badge}>
+          P1: ({positions[0].col}, {positions[0].row})
+        </span>
+        <span className={styles.p2Badge}>
+          P2: ({positions[1].col}, {positions[1].row})
+        </span>
       </div>
 
       <div className={styles.diceArea}>
-        <div className={`${styles.dice} ${isRolling ? styles.rolling : ''}`}>
-          {diceValue ? DICE_FACES[diceValue - 1] : '\uD83C\uDFB2'}
+        <div className={styles.dicePair}>
+          <div className={`${styles.dice} ${isRolling ? styles.rolling : ''}`}>
+            {dice ? DICE_FACES[dice[0] - 1] : '\uD83C\uDFB2'}
+          </div>
+          <div className={`${styles.dice} ${isRolling ? styles.rolling : ''}`}>
+            {dice ? DICE_FACES[dice[1] - 1] : '\uD83C\uDFB2'}
+          </div>
         </div>
-        {diceValue && <div className={styles.diceResult}>{diceValue}</div>}
+        {dice && (
+          <div className={styles.diceResult}>
+            ({dice[0]}, {dice[1]})
+          </div>
+        )}
       </div>
 
       <button

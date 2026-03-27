@@ -43,8 +43,13 @@
 }
 
 .players {
+  position: absolute;
+  inset: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 2px;
+  pointer-events: none;
 }
 
 .p1,
@@ -58,6 +63,7 @@
   font-size: 0.7rem;
   font-weight: bold;
   color: #fff;
+  z-index: 1;
 }
 
 .p1 {
