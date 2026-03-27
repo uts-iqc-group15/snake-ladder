@@ -3,6 +3,8 @@ import { useMutation } from '@tanstack/react-query'
 import {
   BOARD_SIZE,
   TOTAL_CELLS,
+  PLACEMENT_MIN,
+  PLACEMENT_MAX,
   QUBIT_CONFIGS,
   isValidPlacement,
   X_VECTOR_TABLE,
@@ -329,6 +331,54 @@ export function useGame() {
     })
   }, [])
 
+  const randomPlaceAll = useCallback(() => {
+    setState((prev) => {
+      if (prev.phase !== 'setup') return prev
+
+      const player = prev.currentPlayer
+      const remaining = prev.setupRemaining[player]
+      if (remaining.length === 0) return prev
+
+      const occupiedCells = prev.qubits.map((q) => q.cell)
+      const newQubits = [...prev.qubits]
+      const newRemaining: [number[], number[]] = [
+        [...prev.setupRemaining[0]],
+        [...prev.setupRemaining[1]],
+      ]
+
+      for (const configIndex of [...remaining]) {
+        let cell: number
+        do {
+          cell = PLACEMENT_MIN + Math.floor(Math.random() * (PLACEMENT_MAX - PLACEMENT_MIN + 1))
+        } while (occupiedCells.includes(cell))
+
+        occupiedCells.push(cell)
+        newQubits.push({
+          id: nextQubitId(),
+          cell,
+          owner: player,
+          configIndex,
+          collapsed: null,
+        })
+
+        const idx = newRemaining[player].indexOf(configIndex)
+        newRemaining[player].splice(idx, 1)
+      }
+
+      const finalQubits = player === 1 ? linkEntangledQubits(newQubits) : newQubits
+
+      return {
+        ...prev,
+        qubits: finalQubits,
+        setupRemaining: newRemaining,
+        selectedConfigIndex: null,
+        phase: 'passing' as GamePhase,
+        currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
+        message: '',
+      }
+    })
+  }, [])
+
   const confirmPass = useCallback(() => {
     setState((prev) => {
       if (prev.phase !== 'passing') return prev
@@ -426,5 +476,5 @@ export function useGame() {
     })
   }, [])
 
-  return { state, selectQubit, placeQubit, confirmPass, handleRoll, reset }
+  return { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset }
 }

@@ -41,8 +41,8 @@ export function QuantumLog({ logs }: QuantumLogProps) {
         style={{ color: '#2c4a7c' }}
         onClick={() => setExpanded(true)}
       >
-        <span className="text-sm">{'\u269B'}</span>
-        Quantum Log
+        <span className="text-sm">🐹</span>
+        Quokka Log
         {logs.length > 0 && (
           <span
             className="px-1.5 py-0.5 rounded text-[0.65rem] font-bold text-text-inverse"
@@ -73,8 +73,8 @@ export function QuantumLog({ logs }: QuantumLogProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border-subtle)] shrink-0 bg-[var(--color-bg)]">
           <div className="flex items-center gap-2 font-mono text-xs font-bold" style={{ color: '#2c4a7c' }}>
-            <span className="text-sm">{'\u269B'}</span>
-            Quantum Log
+            <span className="text-sm">🐹</span>
+            Quokka Log
             <span className="text-text-secondary font-normal">({logs.length})</span>
           </div>
           <button
@@ -93,7 +93,7 @@ export function QuantumLog({ logs }: QuantumLogProps) {
         >
           {logs.length === 0 ? (
             <div className="text-text-secondary text-center py-4">
-              Waiting for quantum measurements...
+              Waiting for quokka measurements...
             </div>
           ) : (
             logs.map((log, i) => {

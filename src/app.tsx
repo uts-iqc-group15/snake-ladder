@@ -1,10 +1,17 @@
+import { useState } from 'react'
 import { Board } from '@/components/board'
 import { Controls } from '@/components/controls'
+import { Credits } from '@/components/credits'
 import { QuantumLog } from '@/components/quantum-log'
 import { useGame } from '@/hooks/use-game'
 
 function App() {
-  const { state, selectQubit, placeQubit, confirmPass, handleRoll, reset } = useGame()
+  const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
+  const [page, setPage] = useState<'game' | 'credits'>('game')
+
+  if (page === 'credits') {
+    return <Credits onBack={() => setPage('game')} />
+  }
 
   return (
     <div className="paper-bg min-h-screen flex flex-col items-center justify-center font-body text-text">
@@ -27,6 +34,7 @@ function App() {
             onRoll={handleRoll}
             onReset={reset}
             onSelectQubit={selectQubit}
+            onRandomPlace={randomPlaceAll}
           />
         </div>
       </div>
@@ -62,7 +70,17 @@ function App() {
         </div>
       )}
 
-      {/* Quantum Log Panel */}
+      {/* Footer */}
+      <footer className="w-full py-3 text-center">
+        <button
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
+          onClick={() => setPage('credits')}
+        >
+          Credits
+        </button>
+      </footer>
+
+      {/* Quokka Log Panel */}
       <QuantumLog logs={state.logs} />
     </div>
   )

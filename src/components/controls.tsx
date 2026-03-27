@@ -7,9 +7,10 @@ interface ControlsProps {
   onRoll: () => void
   onReset: () => void
   onSelectQubit: (configIndex: number) => void
+  onRandomPlace: () => void
 }
 
-export function Controls({ state, onRoll, onReset, onSelectQubit }: ControlsProps) {
+export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace }: ControlsProps) {
   const {
     phase,
     currentPlayer,
@@ -79,6 +80,12 @@ export function Controls({ state, onRoll, onReset, onSelectQubit }: ControlsProp
               Click a cell (6-95) to place the qubit
             </div>
           )}
+          <button
+            className="mt-1 py-2 px-4 text-xs font-bold text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
+            onClick={onRandomPlace}
+          >
+            Random Place All
+          </button>
         </div>
       )}
 
