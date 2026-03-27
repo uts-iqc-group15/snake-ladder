@@ -60,7 +60,7 @@ export function QuantumLog({ logs }: QuantumLogProps) {
     <div
       className="fixed bottom-4 right-4 z-50 flex flex-col rounded-xl overflow-hidden border border-[var(--color-border)] shadow-[var(--shadow-board)]"
       style={{
-        width: 'min(520px, calc(100vw - 2rem))',
+        width: 'min(640px, calc(100vw - 2rem))',
         height: 'min(320px, 40vh)',
         background: 'var(--color-surface)',
         resize: 'both',

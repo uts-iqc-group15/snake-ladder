@@ -3,7 +3,7 @@ export function buildSingleQubitQASM(ladderProb: number): string {
   return `OPENQASM 2.0;
 qreg q[1];
 creg c[1];
-ry(${theta}) q[0];
+ry(${parseFloat(theta.toFixed(4))}) q[0];
 measure q[0] -> c[0];`
 }
 

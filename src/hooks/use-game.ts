@@ -164,6 +164,8 @@ export function useGame() {
         if (config.entangled && qubit.entangledPartnerId) {
           const qasm = buildEntangledQASM()
           addLog('info', `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell}...`)
+          addLog('info', `Circuit: H→CNOT creates Bell state (|00⟩+|11⟩)/√2, then H for interference`)
+          addLog('info', `Outcomes: 00(25%)=both ladders, 11(25%)=both snakes, 01/10(50%)=interference`)
           addLog('qasm', qasm)
 
           const result = await sendToQuokka(qasm)
@@ -181,8 +183,11 @@ export function useGame() {
           return { qubitId: qubit.id, outcome: 'interference', partnerId: qubit.entangledPartnerId, partnerOutcome: 'interference' }
         }
 
+        const theta = 2 * Math.acos(Math.sqrt(config.ladderProb))
         const qasm = buildSingleQubitQASM(config.ladderProb)
         addLog('info', `Measuring qubit [${config.label}] at cell ${qubit.cell}...`)
+        addLog('info', `Circuit: ladderProb=${config.ladderProb} → θ=2·arccos(√${config.ladderProb})=${theta.toFixed(4)}rad → ry(${theta.toFixed(4)})`)
+        addLog('info', `P(ladder)=cos²(θ/2)=${config.ladderProb}, P(snake)=sin²(θ/2)=${config.snakeProb}`)
         addLog('qasm', qasm)
 
         const result = await sendToQuokka(qasm)
