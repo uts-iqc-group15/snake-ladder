@@ -277,7 +277,7 @@ export function Poc() {
           </div>
 
           {/* Controls */}
-          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px]">
+          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px] md:h-[320px] md:overflow-y-auto">
             {/* Current player */}
             <div
               className={`text-lg font-bold px-4 py-3 rounded-lg text-text ${playerTint}`}
