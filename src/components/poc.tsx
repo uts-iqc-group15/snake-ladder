@@ -67,7 +67,13 @@ export function Poc({ onBack }: { onBack: () => void }) {
                   const qubitHere = state.qubits.find((q) => q.cell === num)
                   const pHere = boardCol === playerCoord.col && boardRow === playerCoord.row
 
-                  const baseBg = isLight ? 'bg-board-light' : 'bg-board-dark'
+                  const isStart = num === 1
+                  const isGoal = num === 16
+                  const baseBg = isStart
+                    ? 'bg-[rgba(45,106,79,0.25)]'
+                    : isGoal
+                      ? 'bg-[rgba(192,69,48,0.25)]'
+                      : isLight ? 'bg-board-light' : 'bg-board-dark'
                   let tintClass = ''
                   if (qubitHere?.collapsed === 'snake') tintClass = 'bg-[rgba(192,69,48,0.12)]'
                   else if (qubitHere?.collapsed === 'ladder') tintClass = 'bg-[rgba(45,106,79,0.12)]'
