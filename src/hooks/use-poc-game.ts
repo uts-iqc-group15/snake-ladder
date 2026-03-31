@@ -8,7 +8,7 @@ import type { LogEntry } from '@/hooks/use-game'
 
 const BOARD_SIZE = 4
 const TOTAL_CELLS = 16
-const DICE_MAX = 3
+const DICE_MAX = 6
 
 interface QubitConfig {
   label: string
@@ -112,8 +112,8 @@ export function usePocGame() {
         if (config.entangled && qubit.entangledPartnerId) {
           const qasm = buildEntangledQASM()
           addLog('info', `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell}...`)
-          addLog('info', `Circuit: H\u2192CNOT creates Bell state (|00\u27E9+|11\u27E9)/\u221A2, then H for interference`)
-          addLog('info', `Outcomes: 00(25%)=ladder, 11(25%)=snake, 01/10(50%)=interference`)
+          addLog('info', `Circuit: H\u2192CNOT creates Bell state (|00\u27E9+|11\u27E9)/\u221A2`)
+          addLog('info', `Outcomes: 00(50%)=ladder, 11(50%)=snake`)
           addLog('qasm', qasm)
 
           const result = await sendToQuokka(qasm)
@@ -154,10 +154,8 @@ export function usePocGame() {
         addLog('error', `Quokka error: ${msg}. Using local fallback.`)
 
         if (config.entangled && qubit.entangledPartnerId) {
-          const r = Math.random()
-          if (r < 0.25) return { qubitId: qubit.id, outcome: 'ladder', partnerId: qubit.entangledPartnerId, partnerOutcome: 'ladder' }
-          if (r < 0.5) return { qubitId: qubit.id, outcome: 'snake', partnerId: qubit.entangledPartnerId, partnerOutcome: 'snake' }
-          return { qubitId: qubit.id, outcome: 'interference', partnerId: qubit.entangledPartnerId, partnerOutcome: 'interference' }
+          const fallback = Math.random() < 0.5 ? 'ladder' : 'snake'
+          return { qubitId: qubit.id, outcome: fallback, partnerId: qubit.entangledPartnerId, partnerOutcome: fallback }
         }
 
         const fallback = Math.random() < config.ladderProb ? 'ladder' : 'snake'
@@ -222,13 +220,13 @@ export function usePocGame() {
 
   // ── Actions ──
 
-  const handleRoll = useCallback(async () => {
+  const handleRoll = useCallback(async (manualDie?: number) => {
     const snap = stateRef.current
     if (snap.phase !== 'play' || snap.isRolling || snap.gameOver || collapseMutation.isPending)
       return
 
     setState((prev) => ({ ...prev, isRolling: true, message: '' }))
-    const die = rollDie()
+    const die = manualDie ?? rollDie()
     await sleep(400)
 
     const current = stateRef.current

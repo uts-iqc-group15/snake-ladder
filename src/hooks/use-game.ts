@@ -164,8 +164,8 @@ export function useGame() {
         if (config.entangled && qubit.entangledPartnerId) {
           const qasm = buildEntangledQASM()
           addLog('info', `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell}...`)
-          addLog('info', `Circuit: H→CNOT creates Bell state (|00⟩+|11⟩)/√2, then H for interference`)
-          addLog('info', `Outcomes: 00(25%)=both ladders, 11(25%)=both snakes, 01/10(50%)=interference`)
+          addLog('info', `Circuit: H→CNOT creates Bell state (|00⟩+|11⟩)/√2`)
+          addLog('info', `Outcomes: 00(50%)=both ladders, 11(50%)=both snakes`)
           addLog('qasm', qasm)
 
           const result = await sendToQuokka(qasm)

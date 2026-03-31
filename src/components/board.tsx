@@ -1,4 +1,4 @@
-import { BOARD_SIZE, QUBIT_CONFIGS, PLACEMENT_MIN, PLACEMENT_MAX } from '@/constants/board'
+import { BOARD_SIZE, TOTAL_CELLS, QUBIT_CONFIGS, PLACEMENT_MIN, PLACEMENT_MAX } from '@/constants/board'
 import { cellToCoord } from '@/constants/board'
 import type { PlacedQubit, GamePhase } from '@/hooks/use-game'
 
@@ -85,7 +85,14 @@ export function Board({
             const p2Here = boardCol === p2Coord.col && boardRow === p2Coord.row
             const showTokens = phase === 'play' || phase === 'gameover'
 
-            const baseBg = isLight ? 'bg-board-light' : 'bg-board-dark'
+            const baseBg =
+              num === 1
+                ? 'bg-[rgba(45,106,79,0.25)]'
+                : num === TOTAL_CELLS
+                  ? 'bg-[rgba(192,69,48,0.25)]'
+                  : isLight
+                    ? 'bg-board-light'
+                    : 'bg-board-dark'
             let tintClass = ''
             if (qubitHere?.collapsed === 'snake') {
               tintClass = 'bg-[rgba(192,69,48,0.12)]'
