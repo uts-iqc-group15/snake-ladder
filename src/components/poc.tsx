@@ -236,10 +236,20 @@ export function Poc({ onBack }: { onBack: () => void }) {
               </div>
             </div>
 
+            {/* Random roll */}
+            <button
+              className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+              style={{ background: playerColor }}
+              onClick={() => handleRoll()}
+              disabled={busy}
+            >
+              {state.isCollapsing ? 'Measuring...' : 'Roll Dice'}
+            </button>
+
             {/* Debug: manual dice input 1-6 */}
             <div className="flex flex-col gap-2">
               <div className="text-xs text-text-secondary font-bold uppercase tracking-wider text-center">
-                Pick a number
+                Debug: Pick a number
               </div>
               <div className="grid grid-cols-6 gap-1">
                 {[1, 2, 3, 4, 5, 6].map((n) => (
