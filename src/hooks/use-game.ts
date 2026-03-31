@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
+import { useLatest, useMemoizedFn } from 'ahooks'
 import { useMutation } from '@tanstack/react-query'
 import {
   BOARD_SIZE,
@@ -142,17 +143,14 @@ function computeDisplacement(
 
 export function useGame() {
   const [state, setState] = useState<GameState>({ ...INITIAL_STATE })
-  const stateRef = useRef(state)
-  useEffect(() => {
-    stateRef.current = state
-  })
+  const stateRef = useLatest(state)
   const logsRef = useRef<LogEntry[]>([])
 
-  const addLog = useCallback((type: LogEntry['type'], message: string) => {
+  const addLog = useMemoizedFn((type: LogEntry['type'], message: string) => {
     const entry: LogEntry = { timestamp: Date.now(), type, message }
     logsRef.current = [...logsRef.current, entry]
     setState((prev) => ({ ...prev, logs: logsRef.current }))
-  }, [])
+  })
 
   // ── Quokka mutation ──
 
@@ -212,7 +210,7 @@ export function useGame() {
     },
   })
 
-  const applyCollapseToState = useCallback(
+  const applyCollapseToState = useMemoizedFn(
     (data: CollapseResult, player: 0 | 1, targetCell: number) => {
       const { qubitId, outcome, partnerId, partnerOutcome } = data
 
@@ -248,6 +246,26 @@ export function useGame() {
           )
         }
 
+        // Chain reaction: another uncollapsed qubit on the destination cell
+        const chainQubit = newQubits.find(
+          (q) => q.cell === newCell && q.collapsed === null,
+        )
+
+        if (!gameOver && chainQubit) {
+          addLog('info', `Chain! Player ${player + 1} landed on another qubit at cell ${newCell}`)
+          setTimeout(() => {
+            collapseMutation.mutate({ qubit: chainQubit, player, targetCell: newCell })
+          }, 300)
+
+          return {
+            ...prev,
+            positions: newPositions,
+            qubits: newQubits,
+            isCollapsing: true,
+            message: `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! → cell ${newCell} | Chain reaction...`,
+          }
+        }
+
         return {
           ...prev,
           positions: newPositions,
@@ -262,20 +280,19 @@ export function useGame() {
         }
       })
     },
-    [addLog],
   )
 
   // ── Setup actions ──
 
-  const selectQubit = useCallback((configIndex: number) => {
+  const selectQubit = useMemoizedFn((configIndex: number) => {
     setState((prev) => {
       if (prev.phase !== 'setup') return prev
       if (!prev.setupRemaining[prev.currentPlayer].includes(configIndex)) return prev
       return { ...prev, selectedConfigIndex: configIndex }
     })
-  }, [])
+  })
 
-  const placeQubit = useCallback((cell: number) => {
+  const placeQubit = useMemoizedFn((cell: number) => {
     setState((prev) => {
       if (prev.phase !== 'setup' || prev.selectedConfigIndex === null) return prev
 
@@ -335,9 +352,9 @@ export function useGame() {
         message: `Player ${player + 1}: Select a qubit and place it (${newRemaining[player].length} left)`,
       }
     })
-  }, [])
+  })
 
-  const randomPlaceAll = useCallback(() => {
+  const randomPlaceAll = useMemoizedFn(() => {
     setState((prev) => {
       if (prev.phase !== 'setup') return prev
 
@@ -383,9 +400,9 @@ export function useGame() {
         message: '',
       }
     })
-  }, [])
+  })
 
-  const confirmPass = useCallback(() => {
+  const confirmPass = useMemoizedFn(() => {
     setState((prev) => {
       if (prev.phase !== 'passing') return prev
       if (prev.setupRemaining[prev.currentPlayer].length > 0) {
@@ -401,11 +418,11 @@ export function useGame() {
         message: `Player ${prev.currentPlayer + 1}'s turn - Roll the dice!`,
       }
     })
-  }, [])
+  })
 
   // ── Play action ──
 
-  const handleRoll = useCallback(async () => {
+  const handleRoll = useMemoizedFn(async () => {
     const snap = stateRef.current
     if (snap.phase !== 'play' || snap.isRolling || snap.gameOver || collapseMutation.isPending) {
       return
@@ -465,11 +482,11 @@ export function useGame() {
         currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
       }))
     }
-  }, [collapseMutation])
+  })
 
   // ── Reset ──
 
-  const reset = useCallback(() => {
+  const reset = useMemoizedFn(() => {
     qubitIdCounter = 0
     logsRef.current = []
     setState({
@@ -477,7 +494,7 @@ export function useGame() {
       setupRemaining: [[...INITIAL_SETUP[0]], [...INITIAL_SETUP[1]]],
       logs: [],
     })
-  }, [])
+  })
 
   return { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset }
 }

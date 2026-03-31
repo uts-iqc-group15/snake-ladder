@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
+import { useLatest, useMemoizedFn } from 'ahooks'
 import { useMutation } from '@tanstack/react-query'
 import { sendToQuokka } from '@/lib/quokka'
 import { buildSingleQubitQASM } from '@/lib/qasm-builder'
@@ -89,28 +90,25 @@ function sleep(ms: number) {
 
 export function usePocGame() {
   const [state, setState] = useState<PocGameState>(createInitialState)
-  const stateRef = useRef(state)
-  useEffect(() => {
-    stateRef.current = state
-  })
+  const stateRef = useLatest(state)
   const logsRef = useRef<LogEntry[]>([])
 
-  const addLog = useCallback((type: LogEntry['type'], message: string) => {
+  const addLog = useMemoizedFn((type: LogEntry['type'], message: string) => {
     const entry: LogEntry = { timestamp: Date.now(), type, message }
     logsRef.current = [...logsRef.current, entry]
     setState((prev) => ({ ...prev, logs: logsRef.current }))
-  }, [])
+  })
 
   // ── Setup actions ──
 
-  const selectQubit = useCallback((configIndex: number) => {
+  const selectQubit = useMemoizedFn((configIndex: number) => {
     setState((prev) => {
       if (prev.phase !== 'setup') return prev
       return { ...prev, selectedConfigIndex: configIndex }
     })
-  }, [])
+  })
 
-  const placeQubit = useCallback((cell: number) => {
+  const placeQubit = useMemoizedFn((cell: number) => {
     setState((prev) => {
       if (prev.phase !== 'setup' || prev.selectedConfigIndex === null) return prev
 
@@ -155,9 +153,9 @@ export function usePocGame() {
         message: "Player 1's turn - Roll or pick a number!",
       }
     })
-  }, [])
+  })
 
-  const randomPlaceAll = useCallback(() => {
+  const randomPlaceAll = useMemoizedFn(() => {
     setState((prev) => {
       if (prev.phase !== 'setup') return prev
 
@@ -205,7 +203,7 @@ export function usePocGame() {
         message: "Player 1's turn - Roll or pick a number!",
       }
     })
-  }, [])
+  })
 
   // ── Quokka mutation ──
 
@@ -303,7 +301,7 @@ export function usePocGame() {
 
   // ── Play actions ──
 
-  const handleRoll = useCallback(async (manualDie?: number) => {
+  const handleRoll = useMemoizedFn(async (manualDie?: number) => {
     const snap = stateRef.current
     if (snap.phase !== 'play' || snap.isRolling || snap.gameOver || collapseMutation.isPending)
       return
@@ -362,12 +360,12 @@ export function usePocGame() {
         message: `P${player + 1} rolled ${die}: cell ${currentCell} \u2192 ${targetCell}`,
       }))
     }
-  }, [collapseMutation, addLog])
+  })
 
-  const reset = useCallback(() => {
+  const reset = useMemoizedFn(() => {
     logsRef.current = []
     setState(createInitialState())
-  }, [])
+  })
 
   return {
     state,

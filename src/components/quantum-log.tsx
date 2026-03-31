@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useLatest, useMemoizedFn } from 'ahooks'
 import { CircuitDiagram } from '@/components/circuit-diagram'
 import type { LogEntry } from '@/hooks/use-game'
 
@@ -34,7 +35,7 @@ export function QuantumLog({ logs }: QuantumLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef(false)
   const startYRef = useRef(0)
-  const startHeightRef = useRef(0)
+  const startHeightRef = useLatest(height)
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -42,23 +43,22 @@ export function QuantumLog({ logs }: QuantumLogProps) {
     }
   }, [logs])
 
-  const onDragStart = useCallback((e: React.PointerEvent) => {
+  const onDragStart = useMemoizedFn((e: React.PointerEvent) => {
     draggingRef.current = true
     startYRef.current = e.clientY
-    startHeightRef.current = height
     e.currentTarget.setPointerCapture(e.pointerId)
-  }, [height])
+  })
 
-  const onDragMove = useCallback((e: React.PointerEvent) => {
+  const onDragMove = useMemoizedFn((e: React.PointerEvent) => {
     if (!draggingRef.current) return
     const delta = startYRef.current - e.clientY
     const maxHeight = window.innerHeight - 32
     setHeight(Math.min(Math.max(startHeightRef.current + delta, MIN_HEIGHT), maxHeight))
-  }, [])
+  })
 
-  const onDragEnd = useCallback(() => {
+  const onDragEnd = useMemoizedFn(() => {
     draggingRef.current = false
-  }, [])
+  })
 
   if (!expanded) {
     return (
