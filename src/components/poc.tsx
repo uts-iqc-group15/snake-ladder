@@ -28,7 +28,7 @@ function cellToPercent(cell: number): { x: number; y: number } {
   }
 }
 
-export function Poc({ onBack }: { onBack: () => void }) {
+export function Poc() {
   const { state, handleRoll, reset, QUBIT_CONFIGS } = usePocGame()
 
   const cells: number[][] = []
@@ -249,7 +249,7 @@ export function Poc({ onBack }: { onBack: () => void }) {
             {/* Debug: manual dice input 1-6 */}
             <div className="flex flex-col gap-2">
               <div className="text-xs text-text-secondary font-bold uppercase tracking-wider text-center">
-                Debug: Pick a number
+                Pick a number
               </div>
               <div className="grid grid-cols-6 gap-1">
                 {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -316,13 +316,20 @@ export function Poc({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <footer className="w-full py-3 text-center">
-        <button
+      {/* Footer */}
+      <footer className="w-full py-3 text-center flex justify-center gap-4">
+        <a
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
-          onClick={onBack}
+          href="#complete"
         >
-          {'\u2190'} Back to Game
-        </button>
+          10x10 Complete
+        </a>
+        <a
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
+          href="#credits"
+        >
+          Credits
+        </a>
       </footer>
 
       <QuantumLog logs={state.logs} />

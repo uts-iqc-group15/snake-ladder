@@ -7,12 +7,12 @@ import { Poc } from '@/components/poc'
 import { QuantumLog } from '@/components/quantum-log'
 import { useGame } from '@/hooks/use-game'
 
-type Page = 'game' | 'credits' | 'poc'
+type Page = 'poc' | 'complete' | 'credits'
 
 function getPageFromHash(): Page {
   const hash = window.location.hash.replace('#', '')
-  if (hash === 'poc' || hash === 'credits') return hash
-  return 'game'
+  if (hash === 'complete' || hash === 'credits') return hash
+  return 'poc'
 }
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
   const confettiFired = useRef(false)
 
   const navigate = (p: Page) => {
-    window.location.hash = p === 'game' ? '' : p
+    window.location.hash = p === 'poc' ? '' : p
     setPage(p)
   }
 
@@ -46,13 +46,14 @@ function App() {
   }, [state.gameOver])
 
   if (page === 'credits') {
-    return <Credits onBack={() => navigate('game')} />
+    return <Credits onBack={() => navigate('poc')} />
   }
 
   if (page === 'poc') {
-    return <Poc onBack={() => navigate('game')} />
+    return <Poc />
   }
 
+  // page === 'complete'
   return (
     <div className="paper-bg min-h-screen flex flex-col items-center justify-center font-body text-text">
       <div className="flex flex-col items-center gap-5 p-4">
@@ -116,7 +117,7 @@ function App() {
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
           onClick={() => navigate('poc')}
         >
-          4x4 POC
+          POC
         </button>
         <button
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
