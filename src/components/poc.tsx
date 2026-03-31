@@ -201,19 +201,30 @@ export function Poc({ onBack }: { onBack: () => void }) {
             </div>
 
             <div className="flex flex-col items-center gap-3">
-              <Dice value={state.dice ?? 3} rolling={state.isRolling} />
+              <Dice value={state.dice ?? 6} rolling={state.isRolling} />
               <div className="text-xl font-bold font-mono text-text-secondary h-7">
                 {state.dice ? `${state.dice}` : '\u00A0'}
               </div>
             </div>
 
-            <button
-              className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] bg-player-1 cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
-              onClick={handleRoll}
-              disabled={state.isRolling || state.isCollapsing || state.gameOver}
-            >
-              {state.isCollapsing ? 'Measuring...' : 'Roll Dice (1-3)'}
-            </button>
+            {/* Debug: manual dice input 1-6 */}
+            <div className="flex flex-col gap-2">
+              <div className="text-xs text-text-secondary font-bold uppercase tracking-wider text-center">
+                Pick a number
+              </div>
+              <div className="grid grid-cols-6 gap-1">
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <button
+                    key={n}
+                    className="py-2 text-sm font-bold rounded-lg border border-[var(--color-border)] cursor-pointer transition-all hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={() => handleRoll(n)}
+                    disabled={state.isRolling || state.isCollapsing || state.gameOver}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <button
               className="py-2 px-6 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
