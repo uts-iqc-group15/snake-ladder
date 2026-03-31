@@ -332,14 +332,18 @@ export function usePocGame() {
       return
     }
 
-    const qubitOnCell = current.qubits.find(
+    const uncollapsedQubit = current.qubits.find(
       (q) => q.cell === targetCell && q.collapsed === null,
+    )
+    const collapsedQubit = current.qubits.find(
+      (q) => q.cell === targetCell && (q.collapsed === 'snake' || q.collapsed === 'ladder'),
     )
 
     const newPositions: [number, number] = [...current.positions]
     newPositions[player] = targetCell
 
-    if (qubitOnCell) {
+    if (uncollapsedQubit) {
+      // New qubit → measure via Quokka
       setState((prev) => ({
         ...prev,
         positions: newPositions,
@@ -348,7 +352,30 @@ export function usePocGame() {
         isCollapsing: true,
         message: `P${player + 1} rolled ${die}: cell ${currentCell} \u2192 ${targetCell} | Quantum measurement...`,
       }))
-      collapseMutation.mutate({ qubit: qubitOnCell, player, targetCell })
+      collapseMutation.mutate({ qubit: uncollapsedQubit, player, targetCell })
+    } else if (collapsedQubit) {
+      // Already collapsed → apply same effect directly
+      const outcome = collapsedQubit.collapsed as 'snake' | 'ladder'
+      const displacement = outcome === 'ladder' ? BOARD_SIZE : -BOARD_SIZE
+      const newCell = Math.max(1, Math.min(TOTAL_CELLS, targetCell + displacement))
+      newPositions[player] = newCell
+      const gameOver = newCell >= TOTAL_CELLS
+
+      addLog('info', `P${player + 1} hit existing ${outcome} at cell ${targetCell} \u2192 ${newCell}`)
+
+      const nextPlayer = gameOver ? player : ((player === 0 ? 1 : 0) as 0 | 1)
+      setState((prev) => ({
+        ...prev,
+        positions: newPositions,
+        dice: die,
+        isRolling: false,
+        gameOver,
+        phase: gameOver ? 'gameover' : 'play',
+        currentPlayer: nextPlayer,
+        message: gameOver
+          ? `Player ${player + 1} wins!`
+          : `P${player + 1} rolled ${die}: ${outcome}! cell ${targetCell} \u2192 ${newCell}`,
+      }))
     } else {
       const nextPlayer = (player === 0 ? 1 : 0) as 0 | 1
       setState((prev) => ({
