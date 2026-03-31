@@ -9,6 +9,8 @@ import type { LogEntry } from '@/hooks/use-game'
 const BOARD_SIZE = 4
 const TOTAL_CELLS = 16
 const DICE_MAX = 6
+const PLACEMENT_MIN = 2
+const PLACEMENT_MAX = 15
 
 interface QubitConfig {
   label: string
@@ -32,12 +34,16 @@ export interface PocQubit {
   destinationCell?: number
 }
 
+export type PocPhase = 'setup' | 'play' | 'gameover'
+
 export interface PocGameState {
-  phase: 'play' | 'gameover'
+  phase: PocPhase
   positions: [number, number]
   currentPlayer: 0 | 1
   dice: number | null
   qubits: PocQubit[]
+  selectedConfigIndex: number | null
+  setupDone: [boolean, boolean]
   message: string
   isRolling: boolean
   isCollapsing: boolean
@@ -47,22 +53,28 @@ export interface PocGameState {
 
 // ── Helpers ─────────────────────────────────────────────
 
+let qubitIdCounter = 0
+
 function createInitialState(): PocGameState {
+  qubitIdCounter = 0
   return {
-    phase: 'play',
+    phase: 'setup',
     positions: [1, 1],
     currentPlayer: 0,
     dice: null,
-    qubits: [
-      { id: 'poc_qb_0', cell: 6, owner: 0, configIndex: 0, collapsed: null },
-      { id: 'poc_qb_1', cell: 11, owner: 1, configIndex: 1, collapsed: null },
-    ],
-    message: "Player 1's turn - Pick a number!",
+    qubits: [],
+    selectedConfigIndex: null,
+    setupDone: [false, false],
+    message: 'Player 1: Select a qubit type, then click a cell to place it',
     isRolling: false,
     isCollapsing: false,
     gameOver: false,
     logs: [],
   }
+}
+
+function isValidPlacement(cell: number, occupiedCells: number[]): boolean {
+  return cell >= PLACEMENT_MIN && cell <= PLACEMENT_MAX && !occupiedCells.includes(cell)
 }
 
 function rollDie(): number {
@@ -87,6 +99,112 @@ export function usePocGame() {
     const entry: LogEntry = { timestamp: Date.now(), type, message }
     logsRef.current = [...logsRef.current, entry]
     setState((prev) => ({ ...prev, logs: logsRef.current }))
+  }, [])
+
+  // ── Setup actions ──
+
+  const selectQubit = useCallback((configIndex: number) => {
+    setState((prev) => {
+      if (prev.phase !== 'setup') return prev
+      return { ...prev, selectedConfigIndex: configIndex }
+    })
+  }, [])
+
+  const placeQubit = useCallback((cell: number) => {
+    setState((prev) => {
+      if (prev.phase !== 'setup' || prev.selectedConfigIndex === null) return prev
+
+      const occupiedCells = prev.qubits.map((q) => q.cell)
+      if (!isValidPlacement(cell, occupiedCells)) return prev
+
+      const player = prev.currentPlayer
+      const configIndex = prev.selectedConfigIndex
+
+      const newQubit: PocQubit = {
+        id: `poc_qb_${++qubitIdCounter}`,
+        cell,
+        owner: player,
+        configIndex,
+        collapsed: null,
+      }
+
+      const newQubits = [...prev.qubits, newQubit]
+      const newSetupDone: [boolean, boolean] = [...prev.setupDone]
+      newSetupDone[player] = true
+
+      // P1 done → switch to P2
+      if (player === 0 && !newSetupDone[1]) {
+        return {
+          ...prev,
+          qubits: newQubits,
+          setupDone: newSetupDone,
+          selectedConfigIndex: null,
+          currentPlayer: 1 as const,
+          message: 'Player 2: Select a qubit type, then click a cell to place it',
+        }
+      }
+
+      // Both done → start play
+      return {
+        ...prev,
+        qubits: newQubits,
+        setupDone: newSetupDone,
+        selectedConfigIndex: null,
+        phase: 'play' as PocPhase,
+        currentPlayer: 0 as const,
+        message: "Player 1's turn - Roll or pick a number!",
+      }
+    })
+  }, [])
+
+  const randomPlaceAll = useCallback(() => {
+    setState((prev) => {
+      if (prev.phase !== 'setup') return prev
+
+      const player = prev.currentPlayer
+      if (prev.setupDone[player]) return prev
+
+      const occupiedCells = prev.qubits.map((q) => q.cell)
+      const configIndex = Math.floor(Math.random() * QUBIT_CONFIGS.length)
+
+      let cell: number
+      do {
+        cell = PLACEMENT_MIN + Math.floor(Math.random() * (PLACEMENT_MAX - PLACEMENT_MIN + 1))
+      } while (occupiedCells.includes(cell))
+
+      const newQubit: PocQubit = {
+        id: `poc_qb_${++qubitIdCounter}`,
+        cell,
+        owner: player,
+        configIndex,
+        collapsed: null,
+      }
+
+      const newQubits = [...prev.qubits, newQubit]
+      const newSetupDone: [boolean, boolean] = [...prev.setupDone]
+      newSetupDone[player] = true
+
+      if (player === 0 && !newSetupDone[1]) {
+        return {
+          ...prev,
+          qubits: newQubits,
+          setupDone: newSetupDone,
+          selectedConfigIndex: null,
+          currentPlayer: 1 as const,
+          message: 'Player 2: Select a qubit type, then click a cell to place it',
+        }
+      }
+
+      return {
+        ...prev,
+        qubits: newQubits,
+        setupDone: newSetupDone,
+        selectedConfigIndex: null,
+        phase: 'play' as PocPhase,
+        currentPlayer: 0 as const,
+        message: "Player 1's turn - Roll or pick a number!",
+      }
+    })
   }, [])
 
   // ── Quokka mutation ──
@@ -161,7 +279,7 @@ export function usePocGame() {
     },
   })
 
-  // ── Actions ──
+  // ── Play actions ──
 
   const handleRoll = useCallback(async (manualDie?: number) => {
     const snap = stateRef.current
@@ -229,5 +347,17 @@ export function usePocGame() {
     setState(createInitialState())
   }, [])
 
-  return { state, handleRoll, reset, BOARD_SIZE, TOTAL_CELLS, QUBIT_CONFIGS }
+  return {
+    state,
+    selectQubit,
+    placeQubit,
+    randomPlaceAll,
+    handleRoll,
+    reset,
+    BOARD_SIZE,
+    TOTAL_CELLS,
+    QUBIT_CONFIGS,
+    PLACEMENT_MIN,
+    PLACEMENT_MAX,
+  }
 }

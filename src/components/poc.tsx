@@ -29,7 +29,17 @@ function cellToPercent(cell: number): { x: number; y: number } {
 }
 
 export function Poc() {
-  const { state, handleRoll, reset, QUBIT_CONFIGS } = usePocGame()
+  const {
+    state,
+    selectQubit,
+    placeQubit,
+    randomPlaceAll,
+    handleRoll,
+    reset,
+    QUBIT_CONFIGS,
+    PLACEMENT_MIN,
+    PLACEMENT_MAX,
+  } = usePocGame()
 
   const cells: number[][] = []
   for (let row = 0; row < BOARD_SIZE; row++) {
@@ -52,7 +62,11 @@ export function Poc() {
     state.currentPlayer === 0 ? 'var(--color-player-1)' : 'var(--color-player-2)'
   const playerTint =
     state.currentPlayer === 0 ? 'bg-[rgba(155,35,53,0.08)]' : 'bg-[rgba(44,74,124,0.08)]'
+
+  const isSetup = state.phase === 'setup'
+  const isPlay = state.phase === 'play' || state.phase === 'gameover'
   const busy = state.isRolling || state.isCollapsing || state.gameOver
+  const occupiedCells = state.qubits.map((q) => q.cell)
 
   return (
     <div className="paper-bg min-h-screen flex flex-col items-center justify-center font-body text-text">
@@ -77,6 +91,14 @@ export function Poc() {
 
                   const isStart = num === 1
                   const isGoal = num === 16
+
+                  const isValidTarget =
+                    isSetup &&
+                    state.selectedConfigIndex !== null &&
+                    num >= PLACEMENT_MIN &&
+                    num <= PLACEMENT_MAX &&
+                    !occupiedCells.includes(num)
+
                   const baseBg = isStart
                     ? 'bg-[rgba(45,106,79,0.25)]'
                     : isGoal
@@ -88,6 +110,7 @@ export function Poc() {
                   if (qubitHere?.collapsed === 'snake') tintClass = 'bg-[rgba(192,69,48,0.12)]'
                   else if (qubitHere?.collapsed === 'ladder')
                     tintClass = 'bg-[rgba(45,106,79,0.12)]'
+                  else if (isSetup && isValidTarget) tintClass = 'bg-[rgba(255,255,255,0.06)]'
 
                   const isDestination = connections.some((q) => q.destinationCell === num)
                   if (isDestination && !tintClass) {
@@ -97,10 +120,18 @@ export function Poc() {
                       tintClass = 'bg-[rgba(45,106,79,0.08)]'
                   }
 
+                  const cursorClass =
+                    isSetup && isValidTarget
+                      ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.12)]'
+                      : ''
+
                   return (
                     <div
                       key={num}
-                      className={`relative flex items-center justify-center select-none transition-colors ${baseBg} ${tintClass}`}
+                      className={`relative flex items-center justify-center select-none transition-colors ${baseBg} ${tintClass} ${cursorClass}`}
+                      onClick={() => {
+                        if (isSetup && isValidTarget) placeQubit(num)
+                      }}
                     >
                       <span className="absolute top-1 left-1.5 text-xs font-bold text-text-cell">
                         {num}
@@ -126,18 +157,20 @@ export function Poc() {
                       )}
 
                       {/* Player tokens */}
-                      <div className="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none">
-                        {p1Here && (
-                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
-                            1
-                          </span>
-                        )}
-                        {p2Here && (
-                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
-                            2
-                          </span>
-                        )}
-                      </div>
+                      {isPlay && (
+                        <div className="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none">
+                          {p1Here && (
+                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                              1
+                            </span>
+                          )}
+                          {p2Here && (
+                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                              2
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 }),
@@ -216,54 +249,100 @@ export function Poc() {
             >
               {state.gameOver
                 ? `Player ${state.currentPlayer + 1} wins!`
-                : `Player ${state.currentPlayer + 1}'s Turn`}
+                : isSetup
+                  ? `Player ${state.currentPlayer + 1} - Setup`
+                  : `Player ${state.currentPlayer + 1}'s Turn`}
             </div>
 
-            {/* Player positions */}
-            <div className="flex justify-center gap-3">
-              <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-1 text-sm font-bold text-text-inverse">
-                P1: Cell {state.positions[0]}
-              </span>
-              <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-2 text-sm font-bold text-text-inverse">
-                P2: Cell {state.positions[1]}
-              </span>
-            </div>
-
-            <div className="flex flex-col items-center gap-3">
-              <Dice value={state.dice ?? 6} rolling={state.isRolling} />
-              <div className="text-xl font-bold font-mono text-text-secondary h-7">
-                {state.dice ? `${state.dice}` : '\u00A0'}
+            {/* ── Setup phase ── */}
+            {isSetup && (
+              <div className="flex flex-col gap-3">
+                <div className="text-xs text-text-secondary font-bold uppercase tracking-wider">
+                  Select a Qubit to Place
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {QUBIT_CONFIGS.map((config, idx) => {
+                    const isSelected = state.selectedConfigIndex === idx
+                    return (
+                      <button
+                        key={idx}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono cursor-pointer transition-all border ${
+                          isSelected
+                            ? 'border-[var(--color-neon-cyan)] bg-[rgba(0,240,255,0.1)] text-[var(--color-neon-cyan)]'
+                            : 'border-[var(--color-border)] bg-transparent text-text-secondary hover:bg-[var(--color-surface-hover)]'
+                        }`}
+                        onClick={() => selectQubit(idx)}
+                      >
+                        <span className="text-base">{'\u2B50'}</span>
+                        <span>[{config.label}]</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {state.selectedConfigIndex !== null && (
+                  <div className="text-xs text-[var(--color-neon-yellow)] mt-1">
+                    Click a cell (2-15) to place the qubit
+                  </div>
+                )}
+                <button
+                  className="mt-1 py-2 px-4 text-xs font-bold text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
+                  onClick={randomPlaceAll}
+                >
+                  Random Place
+                </button>
               </div>
-            </div>
+            )}
 
-            {/* Random roll */}
-            <button
-              className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
-              style={{ background: playerColor }}
-              onClick={() => handleRoll()}
-              disabled={busy}
-            >
-              {state.isCollapsing ? 'Measuring...' : 'Roll Dice'}
-            </button>
+            {/* ── Play phase ── */}
+            {isPlay && (
+              <>
+                {/* Player positions */}
+                <div className="flex justify-center gap-3">
+                  <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-1 text-sm font-bold text-text-inverse">
+                    P1: Cell {state.positions[0]}
+                  </span>
+                  <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-2 text-sm font-bold text-text-inverse">
+                    P2: Cell {state.positions[1]}
+                  </span>
+                </div>
 
-            {/* Debug: manual dice input 1-6 */}
-            <div className="flex flex-col gap-2">
-              <div className="text-xs text-text-secondary font-bold uppercase tracking-wider text-center">
-                Pick a number
-              </div>
-              <div className="grid grid-cols-6 gap-1">
-                {[1, 2, 3, 4, 5, 6].map((n) => (
-                  <button
-                    key={n}
-                    className="py-2 text-sm font-bold rounded-lg border border-[var(--color-border)] cursor-pointer transition-all hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
-                    onClick={() => handleRoll(n)}
-                    disabled={busy}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <div className="flex flex-col items-center gap-3">
+                  <Dice value={state.dice ?? 6} rolling={state.isRolling} />
+                  <div className="text-xl font-bold font-mono text-text-secondary h-7">
+                    {state.dice ? `${state.dice}` : '\u00A0'}
+                  </div>
+                </div>
+
+                {/* Random roll */}
+                <button
+                  className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+                  style={{ background: playerColor }}
+                  onClick={() => handleRoll()}
+                  disabled={busy}
+                >
+                  {state.isCollapsing ? 'Measuring...' : 'Roll Dice'}
+                </button>
+
+                {/* Manual dice input 1-6 */}
+                <div className="flex flex-col gap-2">
+                  <div className="text-xs text-text-secondary font-bold uppercase tracking-wider text-center">
+                    Pick a number
+                  </div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <button
+                        key={n}
+                        className="py-2 text-sm font-bold rounded-lg border border-[var(--color-border)] cursor-pointer transition-all hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+                        onClick={() => handleRoll(n)}
+                        disabled={busy}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             <button
               className="py-2 px-6 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
@@ -287,31 +366,33 @@ export function Poc() {
             </div>
 
             {/* Qubit legend */}
-            <div className="border-t border-[var(--color-border-subtle)] pt-3">
-              <div className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">
-                Qubits on Board
+            {state.qubits.length > 0 && (
+              <div className="border-t border-[var(--color-border-subtle)] pt-3">
+                <div className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">
+                  Qubits on Board
+                </div>
+                {state.qubits.map((q) => {
+                  const config = QUBIT_CONFIGS[q.configIndex]
+                  const icon = q.collapsed
+                    ? q.collapsed === 'ladder'
+                      ? '\u2705'
+                      : '\u274C'
+                    : '\u2B50'
+                  return (
+                    <div
+                      key={q.id}
+                      className="flex items-center gap-2 text-xs text-text-secondary py-0.5"
+                    >
+                      <span>{icon}</span>
+                      <span>
+                        P{q.owner + 1} {'\u2192'} Cell {q.cell} [{config.label}]
+                        {q.collapsed && ` → ${q.collapsed}`}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
-              {state.qubits.map((q) => {
-                const config = QUBIT_CONFIGS[q.configIndex]
-                const icon = q.collapsed
-                  ? q.collapsed === 'ladder'
-                    ? '\u2705'
-                    : '\u274C'
-                  : '\u2B50'
-                return (
-                  <div
-                    key={q.id}
-                    className="flex items-center gap-2 text-xs text-text-secondary py-0.5"
-                  >
-                    <span>{icon}</span>
-                    <span>
-                      P{q.owner + 1} {'\u2192'} Cell {q.cell} [{config.label}]
-                      {q.collapsed && ` → ${q.collapsed}`}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
+            )}
           </div>
         </div>
       </div>
