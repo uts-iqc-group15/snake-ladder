@@ -458,11 +458,11 @@ export function useGame() {
       return
     }
 
-    const qubitOnCell = current.qubits.find(
+    const uncollapsedQubit = current.qubits.find(
       (q) => q.cell === targetCell && q.collapsed === null,
     )
 
-    if (qubitOnCell) {
+    if (uncollapsedQubit) {
       setState((prev) => ({
         ...prev,
         positions: newPositions,
@@ -471,17 +471,45 @@ export function useGame() {
         isCollapsing: true,
         message: `${msg} | Quantum measurement...`,
       }))
-      collapseMutation.mutate({ qubit: qubitOnCell, player, targetCell })
-    } else {
+      collapseMutation.mutate({ qubit: uncollapsedQubit, player, targetCell })
+      return
+    }
+
+    // Already-collapsed snake/ladder: apply the same effect to this player
+    const collapsedQubit = current.qubits.find(
+      (q) => q.cell === targetCell && (q.collapsed === 'snake' || q.collapsed === 'ladder'),
+    )
+
+    if (collapsedQubit) {
+      const outcome = collapsedQubit.collapsed as 'snake' | 'ladder'
+      const newCell = computeDisplacement(outcome, targetCell, addLog)
+      addLog('info', `Player ${player + 1} hit existing ${outcome} at cell ${targetCell} → cell ${newCell}`)
+      newPositions[player] = newCell
+      const gameOver = newCell === TOTAL_CELLS
+
       setState((prev) => ({
         ...prev,
         positions: newPositions,
         dice: die,
         isRolling: false,
-        message: msg,
-        currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
+        gameOver,
+        phase: gameOver ? ('gameover' as GamePhase) : prev.phase,
+        currentPlayer: gameOver ? prev.currentPlayer : ((player === 0 ? 1 : 0) as 0 | 1),
+        message: gameOver
+          ? `Player ${player + 1} wins!`
+          : `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! → cell ${newCell}`,
       }))
+      return
     }
+
+    setState((prev) => ({
+      ...prev,
+      positions: newPositions,
+      dice: die,
+      isRolling: false,
+      message: msg,
+      currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
+    }))
   })
 
   // ── Reset ──
