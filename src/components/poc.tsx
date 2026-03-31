@@ -277,7 +277,7 @@ export function Poc() {
           </div>
 
           {/* Controls */}
-          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px] min-h-[420px]">
+          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px]">
             {/* Current player */}
             <div
               className={`text-lg font-bold px-4 py-3 rounded-lg text-text ${playerTint}`}
@@ -401,36 +401,29 @@ export function Poc() {
               {state.message || '\u00A0'}
             </div>
 
-            {/* Qubit legend */}
-            {state.qubits.length > 0 && (
-              <div className="border-t border-[var(--color-border-subtle)] pt-3">
-                <div className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">
-                  Qubits on Board
-                </div>
-                {state.qubits.map((q) => {
-                  const config = QUBIT_CONFIGS[q.configIndex]
-                  const icon = q.collapsed
-                    ? q.collapsed === 'ladder'
-                      ? '\u2705'
-                      : '\u274C'
-                    : '\u2B50'
-                  return (
-                    <div
-                      key={q.id}
-                      className="flex items-center gap-2 text-xs text-text-secondary py-0.5"
-                    >
-                      <span>{icon}</span>
-                      <span>
-                        P{q.owner + 1} {'\u2192'} Cell {q.cell} [{config.label}]
-                        {q.collapsed && ` → ${q.collapsed}`}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Qubit legend — below board & controls */}
+        {state.qubits.length > 0 && (
+          <div className="flex items-center justify-center gap-6 text-xs text-text-secondary">
+            {state.qubits.map((q) => {
+              const config = QUBIT_CONFIGS[q.configIndex]
+              const icon = q.collapsed
+                ? q.collapsed === 'ladder'
+                  ? '\u2705'
+                  : '\u274C'
+                : '\u2B50'
+              return (
+                <span key={q.id} className="flex items-center gap-1.5">
+                  <span>{icon}</span>
+                  P{q.owner + 1} {'\u2192'} Cell {q.cell} [{config.label}]
+                  {q.collapsed && ` → ${q.collapsed}`}
+                </span>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
