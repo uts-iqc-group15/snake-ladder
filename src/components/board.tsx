@@ -175,59 +175,99 @@ export function Board({
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
         >
-          <defs>
-            <marker
-              id="arrow-snake"
-              viewBox="0 0 6 6"
-              refX="5"
-              refY="3"
-              markerWidth="4"
-              markerHeight="4"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 6 3 L 0 6 z" fill="var(--color-snake)" />
-            </marker>
-            <marker
-              id="arrow-ladder"
-              viewBox="0 0 6 6"
-              refX="5"
-              refY="3"
-              markerWidth="4"
-              markerHeight="4"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 6 3 L 0 6 z" fill="var(--color-ladder)" />
-            </marker>
-          </defs>
           {connections.map((q) => {
             const from = cellToPercent(q.cell)
             const to = cellToPercent(q.destinationCell!)
             const isSnake = q.collapsed === 'snake'
-            const color = isSnake ? 'var(--color-snake)' : 'var(--color-ladder)'
-            const markerId = isSnake ? 'url(#arrow-snake)' : 'url(#arrow-ladder)'
 
-            // Bezier control point offset for a nice curve
+            if (isSnake) {
+              // Snake: wavy sinusoidal body + triangle head
+              const dx = to.x - from.x
+              const dy = to.y - from.y
+              const dist = Math.sqrt(dx * dx + dy * dy)
+              const ux = dx / (dist || 1)
+              const uy = dy / (dist || 1)
+              const nx = -uy
+              const ny = ux
+              const segments = 20
+              const amplitude = Math.min(dist * 0.12, 3)
+              const points: string[] = []
+              for (let i = 0; i <= segments; i++) {
+                const t = i / segments
+                const baseX = from.x + dx * t
+                const baseY = from.y + dy * t
+                const wave = Math.sin(t * Math.PI * 4) * amplitude * (1 - t * 0.3)
+                points.push(`${baseX + nx * wave},${baseY + ny * wave}`)
+              }
+              // Head direction
+              const headSize = 1.2
+              const hx = to.x
+              const hy = to.y
+              return (
+                <g key={q.id}>
+                  <polyline
+                    points={points.join(' ')}
+                    fill="none"
+                    stroke="var(--color-snake)"
+                    strokeWidth="1"
+                    strokeOpacity="0.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Snake head */}
+                  <polygon
+                    points={`${hx},${hy} ${hx - ux * headSize + nx * headSize * 0.6},${hy - uy * headSize + ny * headSize * 0.6} ${hx - ux * headSize - nx * headSize * 0.6},${hy - uy * headSize - ny * headSize * 0.6}`}
+                    fill="var(--color-snake)"
+                    fillOpacity="0.85"
+                  />
+                  {/* Snake eyes */}
+                  <circle cx={hx - ux * 0.5 + nx * 0.3} cy={hy - uy * 0.5 + ny * 0.3} r="0.25" fill="#fff" />
+                  <circle cx={hx - ux * 0.5 - nx * 0.3} cy={hy - uy * 0.5 - ny * 0.3} r="0.25" fill="#fff" />
+                </g>
+              )
+            }
+
+            // Ladder: two parallel rails + rungs
             const dx = to.x - from.x
             const dy = to.y - from.y
             const dist = Math.sqrt(dx * dx + dy * dy)
-            const curvature = Math.min(dist * 0.3, 8)
-            // Perpendicular offset for curve
             const nx = -dy / (dist || 1)
             const ny = dx / (dist || 1)
-            const cx = (from.x + to.x) / 2 + nx * curvature
-            const cy = (from.y + to.y) / 2 + ny * curvature
+            const railGap = 1.2
+            const rungCount = Math.max(3, Math.round(dist / 5))
 
             return (
-              <path
-                key={q.id}
-                d={`M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`}
-                fill="none"
-                stroke={color}
-                strokeWidth="0.6"
-                strokeOpacity="0.7"
-                strokeLinecap="round"
-                markerEnd={markerId}
-              />
+              <g key={q.id}>
+                {/* Left rail */}
+                <line
+                  x1={from.x + nx * railGap} y1={from.y + ny * railGap}
+                  x2={to.x + nx * railGap} y2={to.y + ny * railGap}
+                  stroke="var(--color-ladder)" strokeWidth="0.5" strokeOpacity="0.8"
+                  strokeLinecap="round"
+                />
+                {/* Right rail */}
+                <line
+                  x1={from.x - nx * railGap} y1={from.y - ny * railGap}
+                  x2={to.x - nx * railGap} y2={to.y - ny * railGap}
+                  stroke="var(--color-ladder)" strokeWidth="0.5" strokeOpacity="0.8"
+                  strokeLinecap="round"
+                />
+                {/* Rungs */}
+                {Array.from({ length: rungCount }, (_, i) => {
+                  const t = (i + 1) / (rungCount + 1)
+                  const rx = from.x + dx * t
+                  const ry = from.y + dy * t
+                  return (
+                    <line
+                      key={i}
+                      x1={rx + nx * railGap} y1={ry + ny * railGap}
+                      x2={rx - nx * railGap} y2={ry - ny * railGap}
+                      stroke="var(--color-ladder)" strokeWidth="0.4" strokeOpacity="0.7"
+                      strokeLinecap="round"
+                    />
+                  )
+                })}
+              </g>
             )
           })}
         </svg>
