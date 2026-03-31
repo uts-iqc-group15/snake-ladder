@@ -427,7 +427,15 @@ export function Poc() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full py-3 text-center">
+      <footer className="w-full py-3 text-center flex justify-center gap-4">
+        <a
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
+          href="https://docs.google.com/document/d/1CLNWo4yvtsBkUWGh4kTIO6U8gh3aiPIevfgGRLuH8Zk/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Documentation
+        </a>
         <a
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
           href="#credits"
