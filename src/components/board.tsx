@@ -72,11 +72,7 @@ export function Board({
 
             const qubitHere = qubits.find((q) => q.cell === num)
             const isOwnQubit = qubitHere && qubitHere.owner === currentPlayer
-            const showQubit =
-              qubitHere &&
-              (qubitHere.collapsed !== null ||
-                (isSetup && isOwnQubit) ||
-                (phase === 'play' && isOwnQubit && qubitHere.collapsed === null))
+            const showQubit = !!qubitHere
 
             const isValidTarget =
               isSetup &&
