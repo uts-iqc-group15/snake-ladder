@@ -3,12 +3,13 @@ import confetti from 'canvas-confetti'
 import { Board } from '@/components/board'
 import { Controls } from '@/components/controls'
 import { Credits } from '@/components/credits'
+import { Poc } from '@/components/poc'
 import { QuantumLog } from '@/components/quantum-log'
 import { useGame } from '@/hooks/use-game'
 
 function App() {
   const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
-  const [page, setPage] = useState<'game' | 'credits'>('game')
+  const [page, setPage] = useState<'game' | 'credits' | 'poc'>('game')
   const confettiFired = useRef(false)
 
   useEffect(() => {
@@ -27,6 +28,10 @@ function App() {
 
   if (page === 'credits') {
     return <Credits onBack={() => setPage('game')} />
+  }
+
+  if (page === 'poc') {
+    return <Poc onBack={() => setPage('game')} />
   }
 
   return (
@@ -87,7 +92,13 @@ function App() {
       )}
 
       {/* Footer */}
-      <footer className="w-full py-3 text-center">
+      <footer className="w-full py-3 text-center flex justify-center gap-4">
+        <button
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
+          onClick={() => setPage('poc')}
+        >
+          4x4 POC
+        </button>
         <button
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
           onClick={() => setPage('credits')}

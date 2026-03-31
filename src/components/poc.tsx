@@ -1,0 +1,262 @@
+import { usePocGame } from '@/hooks/use-poc-game'
+import { Dice } from '@/components/dice'
+import { QuantumLog } from '@/components/quantum-log'
+
+const BOARD_SIZE = 4
+
+function getCellNumber(row: number, col: number): number {
+  const boardRow = BOARD_SIZE - 1 - row
+  return boardRow % 2 === 0
+    ? boardRow * BOARD_SIZE + col + 1
+    : boardRow * BOARD_SIZE + (BOARD_SIZE - col)
+}
+
+function cellToCoord(cell: number): { col: number; row: number } {
+  const row = Math.floor((cell - 1) / BOARD_SIZE)
+  let col = (cell - 1) % BOARD_SIZE
+  if (row % 2 === 1) col = BOARD_SIZE - 1 - col
+  return { col, row }
+}
+
+function cellToPercent(cell: number): { x: number; y: number } {
+  const coord = cellToCoord(cell)
+  const rowIdx = BOARD_SIZE - 1 - coord.row
+  const step = 100 / BOARD_SIZE
+  return {
+    x: coord.col * step + step / 2,
+    y: rowIdx * step + step / 2,
+  }
+}
+
+export function Poc({ onBack }: { onBack: () => void }) {
+  const { state, handleRoll, reset, QUBIT_CONFIGS } = usePocGame()
+
+  const cells: number[][] = []
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    const rowCells: number[] = []
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      rowCells.push(getCellNumber(row, col))
+    }
+    cells.push(rowCells)
+  }
+
+  const playerCoord = cellToCoord(state.position)
+
+  const connections = state.qubits.filter(
+    (q) =>
+      (q.collapsed === 'snake' || q.collapsed === 'ladder') && q.destinationCell !== undefined,
+  )
+
+  return (
+    <div className="paper-bg min-h-screen flex flex-col items-center justify-center font-body text-text">
+      <div className="flex flex-col items-center gap-5 p-4">
+        <h1 className="font-display text-[1.75rem] lg:text-[2.25rem] text-text font-bold select-none">
+          POC — 4x4 Prototype
+        </h1>
+
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+          {/* 4x4 Board */}
+          <div className="relative" style={{ width: 320, height: 320 }}>
+            <div className="w-full h-full grid grid-cols-4 gap-px bg-[var(--color-board-border)] rounded-[var(--radius-board)] overflow-hidden shadow-[var(--shadow-board)]">
+              {cells.map((row, rowIdx) =>
+                row.map((num, colIdx) => {
+                  const isLight = (rowIdx + colIdx) % 2 === 0
+                  const boardRow = BOARD_SIZE - 1 - rowIdx
+                  const boardCol = colIdx
+
+                  const qubitHere = state.qubits.find((q) => q.cell === num)
+                  const pHere = boardCol === playerCoord.col && boardRow === playerCoord.row
+
+                  const baseBg = isLight ? 'bg-board-light' : 'bg-board-dark'
+                  let tintClass = ''
+                  if (qubitHere?.collapsed === 'snake') tintClass = 'bg-[rgba(192,69,48,0.12)]'
+                  else if (qubitHere?.collapsed === 'ladder') tintClass = 'bg-[rgba(45,106,79,0.12)]'
+
+                  const isDestination = connections.some((q) => q.destinationCell === num)
+                  if (isDestination && !tintClass) {
+                    const srcQubit = connections.find((q) => q.destinationCell === num)
+                    if (srcQubit?.collapsed === 'snake') tintClass = 'bg-[rgba(192,69,48,0.08)]'
+                    else if (srcQubit?.collapsed === 'ladder') tintClass = 'bg-[rgba(45,106,79,0.08)]'
+                  }
+
+                  return (
+                    <div
+                      key={num}
+                      className={`relative flex items-center justify-center select-none transition-colors ${baseBg} ${tintClass}`}
+                    >
+                      <span className="absolute top-1 left-1.5 text-xs font-bold text-text-cell">
+                        {num}
+                      </span>
+
+                      {qubitHere && qubitHere.collapsed === null && (
+                        <span
+                          className="absolute bottom-1 right-1 text-xl animate-quantum-shimmer"
+                          title={`Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]`}
+                        >
+                          {'\u2B50'}
+                        </span>
+                      )}
+
+                      {pHere && (
+                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-player-1 text-sm font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                          P
+                        </span>
+                      )}
+                    </div>
+                  )
+                }),
+              )}
+            </div>
+
+            {/* SVG connections */}
+            {connections.length > 0 && (
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none z-20"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <marker
+                    id="poc-arrow-snake"
+                    viewBox="0 0 6 6"
+                    refX="5"
+                    refY="3"
+                    markerWidth="4"
+                    markerHeight="4"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 6 3 L 0 6 z" fill="var(--color-snake)" />
+                  </marker>
+                  <marker
+                    id="poc-arrow-ladder"
+                    viewBox="0 0 6 6"
+                    refX="5"
+                    refY="3"
+                    markerWidth="4"
+                    markerHeight="4"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 6 3 L 0 6 z" fill="var(--color-ladder)" />
+                  </marker>
+                </defs>
+                {connections.map((q) => {
+                  const from = cellToPercent(q.cell)
+                  const to = cellToPercent(q.destinationCell!)
+                  const isSnake = q.collapsed === 'snake'
+                  const color = isSnake ? 'var(--color-snake)' : 'var(--color-ladder)'
+                  const markerId = isSnake ? 'url(#poc-arrow-snake)' : 'url(#poc-arrow-ladder)'
+                  const dx = to.x - from.x
+                  const dy = to.y - from.y
+                  const dist = Math.sqrt(dx * dx + dy * dy)
+                  const curvature = Math.min(dist * 0.3, 12)
+                  const nx = -dy / (dist || 1)
+                  const ny = dx / (dist || 1)
+                  const cx = (from.x + to.x) / 2 + nx * curvature
+                  const cy = (from.y + to.y) / 2 + ny * curvature
+
+                  return (
+                    <path
+                      key={q.id}
+                      d={`M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1"
+                      strokeOpacity="0.7"
+                      strokeLinecap="round"
+                      markerEnd={markerId}
+                    />
+                  )
+                })}
+              </svg>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[240px] md:w-[240px]">
+            <div
+              className="text-lg font-bold px-4 py-3 rounded-lg text-text bg-[rgba(155,35,53,0.08)]"
+              style={{ borderLeft: '3px solid var(--color-player-1)' }}
+            >
+              {state.gameOver ? 'You Win!' : 'Your Turn'}
+            </div>
+
+            <div className="text-center">
+              <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-1 text-sm font-bold text-text-inverse">
+                Cell {state.position} / 16
+              </span>
+            </div>
+
+            <div className="flex flex-col items-center gap-3">
+              <Dice value={state.dice ?? 3} rolling={state.isRolling} />
+              <div className="text-xl font-bold font-mono text-text-secondary h-7">
+                {state.dice ? `${state.dice}` : '\u00A0'}
+              </div>
+            </div>
+
+            <button
+              className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] bg-player-1 cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+              onClick={handleRoll}
+              disabled={state.isRolling || state.isCollapsing || state.gameOver}
+            >
+              {state.isCollapsing ? 'Measuring...' : 'Roll Dice (1-3)'}
+            </button>
+
+            <button
+              className="py-2 px-6 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
+              onClick={reset}
+            >
+              Reset
+            </button>
+
+            <div
+              className={`text-sm min-h-12 px-2 py-1 text-center leading-relaxed ${
+                state.gameOver
+                  ? 'text-success font-bold'
+                  : state.message.includes('Snake')
+                    ? 'text-snake'
+                    : state.message.includes('Ladder')
+                      ? 'text-ladder'
+                      : 'text-text-secondary'
+              }`}
+            >
+              {state.message || '\u00A0'}
+            </div>
+
+            {/* Qubit legend */}
+            <div className="border-t border-[var(--color-border-subtle)] pt-3">
+              <div className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">
+                Qubits on Board
+              </div>
+              {state.qubits.map((q) => {
+                const config = QUBIT_CONFIGS[q.configIndex]
+                return (
+                  <div
+                    key={q.id}
+                    className="flex items-center gap-2 text-xs text-text-secondary py-0.5"
+                  >
+                    <span>{q.collapsed ? (q.collapsed === 'ladder' ? '\u2705' : '\u274C') : '\u2B50'}</span>
+                    <span>
+                      Cell {q.cell} [{config.label}]
+                      {q.collapsed && ` \u2192 ${q.collapsed}`}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer className="w-full py-3 text-center">
+        <button
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
+          onClick={onBack}
+        >
+          {'\u2190'} Back to Game
+        </button>
+      </footer>
+
+      <QuantumLog logs={state.logs} />
+    </div>
+  )
+}
