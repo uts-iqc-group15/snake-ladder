@@ -91,9 +91,17 @@ export function Poc({ onBack }: { onBack: () => void }) {
                       {qubitHere && qubitHere.collapsed === null && (
                         <span
                           className="absolute bottom-1 right-1 text-xl animate-quantum-shimmer"
-                          title={`Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]`}
+                          title={`Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]${qubitHere.entangledPartnerId ? ' (Entangled)' : ''}`}
                         >
-                          {'\u2B50'}
+                          {qubitHere.entangledPartnerId ? '\u269B' : '\u2B50'}
+                        </span>
+                      )}
+                      {qubitHere?.collapsed === 'interference' && (
+                        <span
+                          className="absolute bottom-1 right-1 text-xl opacity-40"
+                          aria-hidden="true"
+                        >
+                          {'\uD83D\uDCA8'}
                         </span>
                       )}
 
@@ -216,7 +224,9 @@ export function Poc({ onBack }: { onBack: () => void }) {
                     ? 'text-snake'
                     : state.message.includes('Ladder')
                       ? 'text-ladder'
-                      : 'text-text-secondary'
+                      : state.message.includes('interference') || state.message.includes('Interference')
+                        ? 'text-[var(--color-neon-cyan)]'
+                        : 'text-text-secondary'
               }`}
             >
               {state.message || '\u00A0'}
@@ -229,14 +239,18 @@ export function Poc({ onBack }: { onBack: () => void }) {
               </div>
               {state.qubits.map((q) => {
                 const config = QUBIT_CONFIGS[q.configIndex]
+                const icon = q.collapsed
+                  ? q.collapsed === 'ladder' ? '\u2705' : q.collapsed === 'interference' ? '\uD83D\uDCA8' : '\u274C'
+                  : q.entangledPartnerId ? '\u269B' : '\u2B50'
                 return (
                   <div
                     key={q.id}
                     className="flex items-center gap-2 text-xs text-text-secondary py-0.5"
                   >
-                    <span>{q.collapsed ? (q.collapsed === 'ladder' ? '\u2705' : '\u274C') : '\u2B50'}</span>
+                    <span>{icon}</span>
                     <span>
                       Cell {q.cell} [{config.label}]
+                      {config.entangled && !q.collapsed && ' Entangled'}
                       {q.collapsed && ` \u2192 ${q.collapsed}`}
                     </span>
                   </div>

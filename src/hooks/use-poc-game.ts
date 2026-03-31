@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { sendToQuokka } from '@/lib/quokka'
-import { buildSingleQubitQASM } from '@/lib/qasm-builder'
+import { buildSingleQubitQASM, buildEntangledQASM } from '@/lib/qasm-builder'
 import type { LogEntry } from '@/hooks/use-game'
 
 // ── POC Constants ───────────────────────────────────────
@@ -14,15 +14,13 @@ interface QubitConfig {
   label: string
   ladderProb: number
   snakeProb: number
+  entangled: boolean
 }
 
 const QUBIT_CONFIGS: QubitConfig[] = [
-  { label: '80/20', ladderProb: 0.8, snakeProb: 0.2 },
-  { label: '20/80', ladderProb: 0.2, snakeProb: 0.8 },
+  { label: '80/20', ladderProb: 0.8, snakeProb: 0.2, entangled: false },
+  { label: '50/50', ladderProb: 0.5, snakeProb: 0.5, entangled: true },
 ]
-
-// Fixed qubit positions for prototype (cell 6 and 11)
-const QUBIT_CELLS = [6, 11]
 
 // ── Types ───────────────────────────────────────────────
 
@@ -30,8 +28,9 @@ export interface PocQubit {
   id: string
   cell: number
   configIndex: number
-  collapsed: null | 'snake' | 'ladder'
+  collapsed: null | 'snake' | 'ladder' | 'interference'
   destinationCell?: number
+  entangledPartnerId?: string
 }
 
 export interface PocGameState {
@@ -53,12 +52,11 @@ function createInitialState(): PocGameState {
     phase: 'play',
     position: 1,
     dice: null,
-    qubits: QUBIT_CELLS.map((cell, i) => ({
-      id: `poc_qb_${i}`,
-      cell,
-      configIndex: i,
-      collapsed: null,
-    })),
+    qubits: [
+      { id: 'poc_qb_0', cell: 5, configIndex: 0, collapsed: null },
+      { id: 'poc_qb_1', cell: 8, configIndex: 1, collapsed: null, entangledPartnerId: 'poc_qb_2' },
+      { id: 'poc_qb_2', cell: 12, configIndex: 1, collapsed: null, entangledPartnerId: 'poc_qb_1' },
+    ],
     message: 'Roll the dice!',
     isRolling: false,
     isCollapsing: false,
@@ -93,15 +91,47 @@ export function usePocGame() {
 
   // ── Quokka mutation ──
 
+  interface CollapseResult {
+    qubitId: string
+    outcome: 'snake' | 'ladder' | 'interference'
+    partnerId?: string
+    partnerOutcome?: 'snake' | 'ladder' | 'interference'
+  }
+
   const collapseMutation = useMutation({
     mutationFn: async ({
       qubit,
     }: {
       qubit: PocQubit
       targetCell: number
-    }): Promise<{ qubitId: string; outcome: 'snake' | 'ladder' }> => {
+    }): Promise<CollapseResult> => {
       const config = QUBIT_CONFIGS[qubit.configIndex]
+
       try {
+        // ── Entangled qubit ──
+        if (config.entangled && qubit.entangledPartnerId) {
+          const qasm = buildEntangledQASM()
+          addLog('info', `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell}...`)
+          addLog('info', `Circuit: H\u2192CNOT creates Bell state (|00\u27E9+|11\u27E9)/\u221A2, then H for interference`)
+          addLog('info', `Outcomes: 00(25%)=ladder, 11(25%)=snake, 01/10(50%)=interference`)
+          addLog('qasm', qasm)
+
+          const result = await sendToQuokka(qasm)
+          const [m0, m1] = [result[0][0], result[0][1]]
+
+          if (m0 === 0 && m1 === 0) {
+            addLog('result', `Entangled: [${m0},${m1}] \u2192 Ladder!`)
+            return { qubitId: qubit.id, outcome: 'ladder', partnerId: qubit.entangledPartnerId, partnerOutcome: 'ladder' }
+          }
+          if (m0 === 1 && m1 === 1) {
+            addLog('result', `Entangled: [${m0},${m1}] \u2192 Snake!`)
+            return { qubitId: qubit.id, outcome: 'snake', partnerId: qubit.entangledPartnerId, partnerOutcome: 'snake' }
+          }
+          addLog('result', `Entangled: [${m0},${m1}] \u2192 Interference! Nothing happens.`)
+          return { qubitId: qubit.id, outcome: 'interference', partnerId: qubit.entangledPartnerId, partnerOutcome: 'interference' }
+        }
+
+        // ── Single qubit ──
         const theta = 2 * Math.acos(Math.sqrt(config.ladderProb))
         const qasm = buildSingleQubitQASM(config.ladderProb)
         addLog('info', `Measuring qubit [${config.label}] at cell ${qubit.cell}...`)
@@ -122,6 +152,14 @@ export function usePocGame() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error'
         addLog('error', `Quokka error: ${msg}. Using local fallback.`)
+
+        if (config.entangled && qubit.entangledPartnerId) {
+          const r = Math.random()
+          if (r < 0.25) return { qubitId: qubit.id, outcome: 'ladder', partnerId: qubit.entangledPartnerId, partnerOutcome: 'ladder' }
+          if (r < 0.5) return { qubitId: qubit.id, outcome: 'snake', partnerId: qubit.entangledPartnerId, partnerOutcome: 'snake' }
+          return { qubitId: qubit.id, outcome: 'interference', partnerId: qubit.entangledPartnerId, partnerOutcome: 'interference' }
+        }
+
         const fallback = Math.random() < config.ladderProb ? 'ladder' : 'snake'
         addLog(
           'result',
@@ -132,8 +170,24 @@ export function usePocGame() {
     },
 
     onSuccess: (data, { targetCell }) => {
-      const { qubitId, outcome } = data
-      // Ladder: up one row (+4), Snake: down one row (-4)
+      const { qubitId, outcome, partnerId, partnerOutcome } = data
+
+      // Interference: nothing happens, just mark both qubits
+      if (outcome === 'interference') {
+        setState((prev) => ({
+          ...prev,
+          qubits: prev.qubits.map((q) =>
+            q.id === qubitId || q.id === partnerId
+              ? { ...q, collapsed: 'interference' as const }
+              : q,
+          ),
+          isCollapsing: false,
+          message: 'Quantum interference! Entangled qubits cancelled out.',
+        }))
+        return
+      }
+
+      // Ladder / Snake displacement
       const displacement = outcome === 'ladder' ? BOARD_SIZE : -BOARD_SIZE
       const newCell = Math.max(1, Math.min(TOTAL_CELLS, targetCell + displacement))
 
@@ -141,12 +195,20 @@ export function usePocGame() {
 
       setState((prev) => {
         const gameOver = newCell >= TOTAL_CELLS
+        let newQubits = prev.qubits.map((q) =>
+          q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
+        )
+        // Also collapse the entangled partner visually
+        if (partnerId && partnerOutcome && partnerOutcome !== 'interference') {
+          newQubits = newQubits.map((q) =>
+            q.id === partnerId ? { ...q, collapsed: partnerOutcome } : q,
+          )
+        }
+
         return {
           ...prev,
           position: newCell,
-          qubits: prev.qubits.map((q) =>
-            q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
-          ),
+          qubits: newQubits,
           isCollapsing: false,
           gameOver,
           phase: gameOver ? 'gameover' : 'play',
