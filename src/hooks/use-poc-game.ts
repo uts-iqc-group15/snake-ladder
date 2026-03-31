@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { sendToQuokka } from '@/lib/quokka'
-import { buildSingleQubitQASM, buildEntangledQASM } from '@/lib/qasm-builder'
+import { buildSingleQubitQASM } from '@/lib/qasm-builder'
 import type { LogEntry } from '@/hooks/use-game'
 
 // ── POC Constants ───────────────────────────────────────
@@ -14,12 +14,11 @@ interface QubitConfig {
   label: string
   ladderProb: number
   snakeProb: number
-  entangled: boolean
 }
 
 const QUBIT_CONFIGS: QubitConfig[] = [
-  { label: '80/20', ladderProb: 0.8, snakeProb: 0.2, entangled: false },
-  { label: '50/50', ladderProb: 0.5, snakeProb: 0.5, entangled: true },
+  { label: '80/20', ladderProb: 0.8, snakeProb: 0.2 },
+  { label: '20/80', ladderProb: 0.2, snakeProb: 0.8 },
 ]
 
 // ── Types ───────────────────────────────────────────────
@@ -27,15 +26,16 @@ const QUBIT_CONFIGS: QubitConfig[] = [
 export interface PocQubit {
   id: string
   cell: number
+  owner: 0 | 1
   configIndex: number
-  collapsed: null | 'snake' | 'ladder' | 'interference'
+  collapsed: null | 'snake' | 'ladder'
   destinationCell?: number
-  entangledPartnerId?: string
 }
 
 export interface PocGameState {
   phase: 'play' | 'gameover'
-  position: number
+  positions: [number, number]
+  currentPlayer: 0 | 1
   dice: number | null
   qubits: PocQubit[]
   message: string
@@ -50,14 +50,14 @@ export interface PocGameState {
 function createInitialState(): PocGameState {
   return {
     phase: 'play',
-    position: 1,
+    positions: [1, 1],
+    currentPlayer: 0,
     dice: null,
     qubits: [
-      { id: 'poc_qb_0', cell: 5, configIndex: 0, collapsed: null },
-      { id: 'poc_qb_1', cell: 8, configIndex: 1, collapsed: null, entangledPartnerId: 'poc_qb_2' },
-      { id: 'poc_qb_2', cell: 12, configIndex: 1, collapsed: null, entangledPartnerId: 'poc_qb_1' },
+      { id: 'poc_qb_0', cell: 6, owner: 0, configIndex: 0, collapsed: null },
+      { id: 'poc_qb_1', cell: 11, owner: 1, configIndex: 1, collapsed: null },
     ],
-    message: 'Roll the dice!',
+    message: "Player 1's turn - Pick a number!",
     isRolling: false,
     isCollapsing: false,
     gameOver: false,
@@ -91,50 +91,19 @@ export function usePocGame() {
 
   // ── Quokka mutation ──
 
-  interface CollapseResult {
-    qubitId: string
-    outcome: 'snake' | 'ladder' | 'interference'
-    partnerId?: string
-    partnerOutcome?: 'snake' | 'ladder' | 'interference'
-  }
-
   const collapseMutation = useMutation({
     mutationFn: async ({
       qubit,
     }: {
       qubit: PocQubit
+      player: 0 | 1
       targetCell: number
-    }): Promise<CollapseResult> => {
+    }): Promise<{ qubitId: string; outcome: 'snake' | 'ladder' }> => {
       const config = QUBIT_CONFIGS[qubit.configIndex]
-
       try {
-        // ── Entangled qubit ──
-        if (config.entangled && qubit.entangledPartnerId) {
-          const qasm = buildEntangledQASM()
-          addLog('info', `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell}...`)
-          addLog('info', `Circuit: H\u2192CNOT creates Bell state (|00\u27E9+|11\u27E9)/\u221A2`)
-          addLog('info', `Outcomes: 00(50%)=ladder, 11(50%)=snake`)
-          addLog('qasm', qasm)
-
-          const result = await sendToQuokka(qasm)
-          const [m0, m1] = [result[0][0], result[0][1]]
-
-          if (m0 === 0 && m1 === 0) {
-            addLog('result', `Entangled: [${m0},${m1}] \u2192 Ladder!`)
-            return { qubitId: qubit.id, outcome: 'ladder', partnerId: qubit.entangledPartnerId, partnerOutcome: 'ladder' }
-          }
-          if (m0 === 1 && m1 === 1) {
-            addLog('result', `Entangled: [${m0},${m1}] \u2192 Snake!`)
-            return { qubitId: qubit.id, outcome: 'snake', partnerId: qubit.entangledPartnerId, partnerOutcome: 'snake' }
-          }
-          addLog('result', `Entangled: [${m0},${m1}] \u2192 Interference! Nothing happens.`)
-          return { qubitId: qubit.id, outcome: 'interference', partnerId: qubit.entangledPartnerId, partnerOutcome: 'interference' }
-        }
-
-        // ── Single qubit ──
         const theta = 2 * Math.acos(Math.sqrt(config.ladderProb))
         const qasm = buildSingleQubitQASM(config.ladderProb)
-        addLog('info', `Measuring qubit [${config.label}] at cell ${qubit.cell}...`)
+        addLog('info', `P${qubit.owner + 1}'s qubit [${config.label}] at cell ${qubit.cell}...`)
         addLog(
           'info',
           `Circuit: ladderProb=${config.ladderProb} \u2192 \u03B8=${theta.toFixed(4)}rad \u2192 ry(${theta.toFixed(4)})`,
@@ -152,12 +121,6 @@ export function usePocGame() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error'
         addLog('error', `Quokka error: ${msg}. Using local fallback.`)
-
-        if (config.entangled && qubit.entangledPartnerId) {
-          const fallback = Math.random() < 0.5 ? 'ladder' : 'snake'
-          return { qubitId: qubit.id, outcome: fallback, partnerId: qubit.entangledPartnerId, partnerOutcome: fallback }
-        }
-
         const fallback = Math.random() < config.ladderProb ? 'ladder' : 'snake'
         addLog(
           'result',
@@ -167,51 +130,31 @@ export function usePocGame() {
       }
     },
 
-    onSuccess: (data, { targetCell }) => {
-      const { qubitId, outcome, partnerId, partnerOutcome } = data
-
-      // Interference: nothing happens, just mark both qubits
-      if (outcome === 'interference') {
-        setState((prev) => ({
-          ...prev,
-          qubits: prev.qubits.map((q) =>
-            q.id === qubitId || q.id === partnerId
-              ? { ...q, collapsed: 'interference' as const }
-              : q,
-          ),
-          isCollapsing: false,
-          message: 'Quantum interference! Entangled qubits cancelled out.',
-        }))
-        return
-      }
-
-      // Ladder / Snake displacement
+    onSuccess: (data, { player, targetCell }) => {
+      const { qubitId, outcome } = data
       const displacement = outcome === 'ladder' ? BOARD_SIZE : -BOARD_SIZE
       const newCell = Math.max(1, Math.min(TOTAL_CELLS, targetCell + displacement))
 
-      addLog('info', `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! Cell ${targetCell} \u2192 ${newCell}`)
+      addLog('info', `Player ${player + 1}: ${outcome === 'ladder' ? 'Ladder' : 'Snake'}! Cell ${targetCell} \u2192 ${newCell}`)
 
       setState((prev) => {
+        const newPositions: [number, number] = [...prev.positions]
+        newPositions[player] = newCell
         const gameOver = newCell >= TOTAL_CELLS
-        let newQubits = prev.qubits.map((q) =>
-          q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
-        )
-        // Also collapse the entangled partner visually
-        if (partnerId && partnerOutcome && partnerOutcome !== 'interference') {
-          newQubits = newQubits.map((q) =>
-            q.id === partnerId ? { ...q, collapsed: partnerOutcome } : q,
-          )
-        }
+        const nextPlayer = gameOver ? prev.currentPlayer : ((player === 0 ? 1 : 0) as 0 | 1)
 
         return {
           ...prev,
-          position: newCell,
-          qubits: newQubits,
+          positions: newPositions,
+          qubits: prev.qubits.map((q) =>
+            q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
+          ),
           isCollapsing: false,
           gameOver,
           phase: gameOver ? 'gameover' : 'play',
+          currentPlayer: nextPlayer,
           message: gameOver
-            ? 'You win!'
+            ? `Player ${player + 1} wins!`
             : `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! \u2192 cell ${newCell}`,
         }
       })
@@ -225,6 +168,7 @@ export function usePocGame() {
     if (snap.phase !== 'play' || snap.isRolling || snap.gameOver || collapseMutation.isPending)
       return
 
+    const player = snap.currentPlayer
     setState((prev) => ({ ...prev, isRolling: true, message: '' }))
     const die = manualDie ?? rollDie()
     await sleep(400)
@@ -232,17 +176,20 @@ export function usePocGame() {
     const current = stateRef.current
     if (!current.isRolling) return
 
-    const targetCell = Math.min(current.position + die, TOTAL_CELLS)
+    const currentCell = current.positions[player]
+    const targetCell = Math.min(currentCell + die, TOTAL_CELLS)
 
     if (targetCell >= TOTAL_CELLS) {
+      const newPositions: [number, number] = [...current.positions]
+      newPositions[player] = targetCell
       setState((prev) => ({
         ...prev,
-        position: targetCell,
+        positions: newPositions,
         dice: die,
         isRolling: false,
         gameOver: true,
         phase: 'gameover',
-        message: `You win! Rolled ${die}: cell ${current.position} \u2192 ${targetCell}`,
+        message: `Player ${player + 1} wins! Rolled ${die}: cell ${currentCell} \u2192 ${targetCell}`,
       }))
       return
     }
@@ -251,23 +198,28 @@ export function usePocGame() {
       (q) => q.cell === targetCell && q.collapsed === null,
     )
 
+    const newPositions: [number, number] = [...current.positions]
+    newPositions[player] = targetCell
+
     if (qubitOnCell) {
       setState((prev) => ({
         ...prev,
-        position: targetCell,
+        positions: newPositions,
         dice: die,
         isRolling: false,
         isCollapsing: true,
-        message: `Rolled ${die}: cell ${current.position} \u2192 ${targetCell} | Quantum measurement...`,
+        message: `P${player + 1} rolled ${die}: cell ${currentCell} \u2192 ${targetCell} | Quantum measurement...`,
       }))
-      collapseMutation.mutate({ qubit: qubitOnCell, targetCell })
+      collapseMutation.mutate({ qubit: qubitOnCell, player, targetCell })
     } else {
+      const nextPlayer = (player === 0 ? 1 : 0) as 0 | 1
       setState((prev) => ({
         ...prev,
-        position: targetCell,
+        positions: newPositions,
         dice: die,
         isRolling: false,
-        message: `Rolled ${die}: cell ${current.position} \u2192 ${targetCell}`,
+        currentPlayer: nextPlayer,
+        message: `P${player + 1} rolled ${die}: cell ${currentCell} \u2192 ${targetCell}`,
       }))
     }
   }, [collapseMutation, addLog])

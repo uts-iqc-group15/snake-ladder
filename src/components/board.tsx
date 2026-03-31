@@ -126,9 +126,9 @@ export function Board({
                   }
                 }}
               >
-                {/* Cell number */}
+                {/* Cell number / label */}
                 <span className="absolute top-0.5 left-1 text-[0.6rem] font-bold text-text-cell">
-                  {num}
+                  {num === 1 ? 'Start' : num === TOTAL_CELLS ? 'End' : num}
                 </span>
 
                 {/* Qubit indicators */}

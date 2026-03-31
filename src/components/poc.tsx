@@ -40,12 +40,19 @@ export function Poc({ onBack }: { onBack: () => void }) {
     cells.push(rowCells)
   }
 
-  const playerCoord = cellToCoord(state.position)
+  const p1Coord = cellToCoord(state.positions[0])
+  const p2Coord = cellToCoord(state.positions[1])
 
   const connections = state.qubits.filter(
     (q) =>
       (q.collapsed === 'snake' || q.collapsed === 'ladder') && q.destinationCell !== undefined,
   )
+
+  const playerColor =
+    state.currentPlayer === 0 ? 'var(--color-player-1)' : 'var(--color-player-2)'
+  const playerTint =
+    state.currentPlayer === 0 ? 'bg-[rgba(155,35,53,0.08)]' : 'bg-[rgba(44,74,124,0.08)]'
+  const busy = state.isRolling || state.isCollapsing || state.gameOver
 
   return (
     <div className="paper-bg min-h-screen flex flex-col items-center justify-center font-body text-text">
@@ -65,7 +72,8 @@ export function Poc({ onBack }: { onBack: () => void }) {
                   const boardCol = colIdx
 
                   const qubitHere = state.qubits.find((q) => q.cell === num)
-                  const pHere = boardCol === playerCoord.col && boardRow === playerCoord.row
+                  const p1Here = boardCol === p1Coord.col && boardRow === p1Coord.row
+                  const p2Here = boardCol === p2Coord.col && boardRow === p2Coord.row
 
                   const isStart = num === 1
                   const isGoal = num === 16
@@ -73,16 +81,20 @@ export function Poc({ onBack }: { onBack: () => void }) {
                     ? 'bg-[rgba(45,106,79,0.25)]'
                     : isGoal
                       ? 'bg-[rgba(192,69,48,0.25)]'
-                      : isLight ? 'bg-board-light' : 'bg-board-dark'
+                      : isLight
+                        ? 'bg-board-light'
+                        : 'bg-board-dark'
                   let tintClass = ''
                   if (qubitHere?.collapsed === 'snake') tintClass = 'bg-[rgba(192,69,48,0.12)]'
-                  else if (qubitHere?.collapsed === 'ladder') tintClass = 'bg-[rgba(45,106,79,0.12)]'
+                  else if (qubitHere?.collapsed === 'ladder')
+                    tintClass = 'bg-[rgba(45,106,79,0.12)]'
 
                   const isDestination = connections.some((q) => q.destinationCell === num)
                   if (isDestination && !tintClass) {
                     const srcQubit = connections.find((q) => q.destinationCell === num)
                     if (srcQubit?.collapsed === 'snake') tintClass = 'bg-[rgba(192,69,48,0.08)]'
-                    else if (srcQubit?.collapsed === 'ladder') tintClass = 'bg-[rgba(45,106,79,0.08)]'
+                    else if (srcQubit?.collapsed === 'ladder')
+                      tintClass = 'bg-[rgba(45,106,79,0.08)]'
                   }
 
                   return (
@@ -93,29 +105,39 @@ export function Poc({ onBack }: { onBack: () => void }) {
                       <span className="absolute top-1 left-1.5 text-xs font-bold text-text-cell">
                         {num}
                       </span>
+                      {isStart && (
+                        <span className="absolute top-1 right-1 text-[0.55rem] font-bold text-ladder uppercase">
+                          Start
+                        </span>
+                      )}
+                      {isGoal && (
+                        <span className="absolute top-1 right-1 text-[0.55rem] font-bold text-snake uppercase">
+                          End
+                        </span>
+                      )}
 
                       {qubitHere && qubitHere.collapsed === null && (
                         <span
                           className="absolute bottom-1 right-1 text-xl animate-quantum-shimmer"
-                          title={`Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]${qubitHere.entangledPartnerId ? ' (Entangled)' : ''}`}
+                          title={`P${qubitHere.owner + 1}'s Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]`}
                         >
-                          {qubitHere.entangledPartnerId ? '\u269B' : '\u2B50'}
-                        </span>
-                      )}
-                      {qubitHere?.collapsed === 'interference' && (
-                        <span
-                          className="absolute bottom-1 right-1 text-xl opacity-40"
-                          aria-hidden="true"
-                        >
-                          {'\uD83D\uDCA8'}
+                          {'\u2B50'}
                         </span>
                       )}
 
-                      {pHere && (
-                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-player-1 text-sm font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
-                          P
-                        </span>
-                      )}
+                      {/* Player tokens */}
+                      <div className="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none">
+                        {p1Here && (
+                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                            1
+                          </span>
+                        )}
+                        {p2Here && (
+                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                            2
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )
                 }),
@@ -186,17 +208,24 @@ export function Poc({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* Controls */}
-          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[240px] md:w-[240px]">
+          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px]">
+            {/* Current player */}
             <div
-              className="text-lg font-bold px-4 py-3 rounded-lg text-text bg-[rgba(155,35,53,0.08)]"
-              style={{ borderLeft: '3px solid var(--color-player-1)' }}
+              className={`text-lg font-bold px-4 py-3 rounded-lg text-text ${playerTint}`}
+              style={{ borderLeft: `3px solid ${playerColor}` }}
             >
-              {state.gameOver ? 'You Win!' : 'Your Turn'}
+              {state.gameOver
+                ? `Player ${state.currentPlayer + 1} wins!`
+                : `Player ${state.currentPlayer + 1}'s Turn`}
             </div>
 
-            <div className="text-center">
+            {/* Player positions */}
+            <div className="flex justify-center gap-3">
               <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-1 text-sm font-bold text-text-inverse">
-                Cell {state.position} / 16
+                P1: Cell {state.positions[0]}
+              </span>
+              <span className="px-3 py-1 rounded-[var(--radius-badge)] bg-player-2 text-sm font-bold text-text-inverse">
+                P2: Cell {state.positions[1]}
               </span>
             </div>
 
@@ -218,7 +247,7 @@ export function Poc({ onBack }: { onBack: () => void }) {
                     key={n}
                     className="py-2 text-sm font-bold rounded-lg border border-[var(--color-border)] cursor-pointer transition-all hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
                     onClick={() => handleRoll(n)}
-                    disabled={state.isRolling || state.isCollapsing || state.gameOver}
+                    disabled={busy}
                   >
                     {n}
                   </button>
@@ -241,9 +270,7 @@ export function Poc({ onBack }: { onBack: () => void }) {
                     ? 'text-snake'
                     : state.message.includes('Ladder')
                       ? 'text-ladder'
-                      : state.message.includes('interference') || state.message.includes('Interference')
-                        ? 'text-[var(--color-neon-cyan)]'
-                        : 'text-text-secondary'
+                      : 'text-text-secondary'
               }`}
             >
               {state.message || '\u00A0'}
@@ -257,8 +284,10 @@ export function Poc({ onBack }: { onBack: () => void }) {
               {state.qubits.map((q) => {
                 const config = QUBIT_CONFIGS[q.configIndex]
                 const icon = q.collapsed
-                  ? q.collapsed === 'ladder' ? '\u2705' : q.collapsed === 'interference' ? '\uD83D\uDCA8' : '\u274C'
-                  : q.entangledPartnerId ? '\u269B' : '\u2B50'
+                  ? q.collapsed === 'ladder'
+                    ? '\u2705'
+                    : '\u274C'
+                  : '\u2B50'
                 return (
                   <div
                     key={q.id}
@@ -266,8 +295,7 @@ export function Poc({ onBack }: { onBack: () => void }) {
                   >
                     <span>{icon}</span>
                     <span>
-                      Cell {q.cell} [{config.label}]
-                      {config.entangled && !q.collapsed && ' Entangled'}
+                      P{q.owner + 1} \u2192 Cell {q.cell} [{config.label}]
                       {q.collapsed && ` \u2192 ${q.collapsed}`}
                     </span>
                   </div>
