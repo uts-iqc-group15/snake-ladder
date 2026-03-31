@@ -259,14 +259,36 @@ export function usePocGame() {
         const newPositions: [number, number] = [...prev.positions]
         newPositions[player] = newCell
         const gameOver = newCell >= TOTAL_CELLS
-        const nextPlayer = gameOver ? prev.currentPlayer : ((player === 0 ? 1 : 0) as 0 | 1)
+        const updatedQubits = prev.qubits.map((q) =>
+          q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
+        )
 
+        // Check for chain reaction: another uncollapsed qubit on the new cell
+        const chainQubit = updatedQubits.find(
+          (q) => q.cell === newCell && q.collapsed === null,
+        )
+
+        if (!gameOver && chainQubit) {
+          addLog('info', `Chain! Player ${player + 1} landed on another qubit at cell ${newCell}`)
+          // Keep collapsing, trigger next measurement after state update
+          setTimeout(() => {
+            collapseMutation.mutate({ qubit: chainQubit, player, targetCell: newCell })
+          }, 300)
+
+          return {
+            ...prev,
+            positions: newPositions,
+            qubits: updatedQubits,
+            isCollapsing: true,
+            message: `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! \u2192 cell ${newCell} | Chain reaction...`,
+          }
+        }
+
+        const nextPlayer = gameOver ? prev.currentPlayer : ((player === 0 ? 1 : 0) as 0 | 1)
         return {
           ...prev,
           positions: newPositions,
-          qubits: prev.qubits.map((q) =>
-            q.id === qubitId ? { ...q, collapsed: outcome, destinationCell: newCell } : q,
-          ),
+          qubits: updatedQubits,
           isCollapsing: false,
           gameOver,
           phase: gameOver ? 'gameover' : 'play',
