@@ -305,8 +305,8 @@ export function Poc({ onBack }: { onBack: () => void }) {
                   >
                     <span>{icon}</span>
                     <span>
-                      P{q.owner + 1} \u2192 Cell {q.cell} [{config.label}]
-                      {q.collapsed && ` \u2192 ${q.collapsed}`}
+                      P{q.owner + 1} {'\u2192'} Cell {q.cell} [{config.label}]
+                      {q.collapsed && ` → ${q.collapsed}`}
                     </span>
                   </div>
                 )
