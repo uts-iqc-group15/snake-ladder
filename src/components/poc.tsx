@@ -277,7 +277,7 @@ export function Poc() {
           </div>
 
           {/* Controls */}
-          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px] md:h-[320px] md:overflow-y-auto">
+          <div className="card-panel flex flex-col gap-4 p-5 w-full md:min-w-[260px] md:w-[260px] min-h-[420px]">
             {/* Current player */}
             <div
               className={`text-lg font-bold px-4 py-3 rounded-lg text-text ${playerTint}`}
@@ -434,13 +434,7 @@ export function Poc() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full py-3 text-center flex justify-center gap-4">
-        <a
-          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
-          href="#complete"
-        >
-          10x10 Complete
-        </a>
+      <footer className="w-full py-3 text-center">
         <a
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
           href="#credits"
