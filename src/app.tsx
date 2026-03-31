@@ -7,10 +7,29 @@ import { Poc } from '@/components/poc'
 import { QuantumLog } from '@/components/quantum-log'
 import { useGame } from '@/hooks/use-game'
 
+type Page = 'game' | 'credits' | 'poc'
+
+function getPageFromHash(): Page {
+  const hash = window.location.hash.replace('#', '')
+  if (hash === 'poc' || hash === 'credits') return hash
+  return 'game'
+}
+
 function App() {
   const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
-  const [page, setPage] = useState<'game' | 'credits' | 'poc'>('game')
+  const [page, setPage] = useState<Page>(getPageFromHash)
   const confettiFired = useRef(false)
+
+  const navigate = (p: Page) => {
+    window.location.hash = p === 'game' ? '' : p
+    setPage(p)
+  }
+
+  useEffect(() => {
+    const onHashChange = () => setPage(getPageFromHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   useEffect(() => {
     if (state.gameOver && !confettiFired.current) {
@@ -27,11 +46,11 @@ function App() {
   }, [state.gameOver])
 
   if (page === 'credits') {
-    return <Credits onBack={() => setPage('game')} />
+    return <Credits onBack={() => navigate('game')} />
   }
 
   if (page === 'poc') {
-    return <Poc onBack={() => setPage('game')} />
+    return <Poc onBack={() => navigate('game')} />
   }
 
   return (
@@ -95,13 +114,13 @@ function App() {
       <footer className="w-full py-3 text-center flex justify-center gap-4">
         <button
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
-          onClick={() => setPage('poc')}
+          onClick={() => navigate('poc')}
         >
           4x4 POC
         </button>
         <button
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
-          onClick={() => setPage('credits')}
+          onClick={() => navigate('credits')}
         >
           Credits
         </button>
