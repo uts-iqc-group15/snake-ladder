@@ -177,63 +177,99 @@ export function Poc() {
               )}
             </div>
 
-            {/* SVG connections */}
+            {/* SVG snake/ladder connections */}
             {connections.length > 0 && (
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none z-20"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
               >
-                <defs>
-                  <marker
-                    id="poc-arrow-snake"
-                    viewBox="0 0 6 6"
-                    refX="5"
-                    refY="3"
-                    markerWidth="4"
-                    markerHeight="4"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 0 L 6 3 L 0 6 z" fill="var(--color-snake)" />
-                  </marker>
-                  <marker
-                    id="poc-arrow-ladder"
-                    viewBox="0 0 6 6"
-                    refX="5"
-                    refY="3"
-                    markerWidth="4"
-                    markerHeight="4"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 0 L 6 3 L 0 6 z" fill="var(--color-ladder)" />
-                  </marker>
-                </defs>
                 {connections.map((q) => {
                   const from = cellToPercent(q.cell)
                   const to = cellToPercent(q.destinationCell!)
                   const isSnake = q.collapsed === 'snake'
-                  const color = isSnake ? 'var(--color-snake)' : 'var(--color-ladder)'
-                  const markerId = isSnake ? 'url(#poc-arrow-snake)' : 'url(#poc-arrow-ladder)'
+
+                  if (isSnake) {
+                    const dx = to.x - from.x
+                    const dy = to.y - from.y
+                    const dist = Math.sqrt(dx * dx + dy * dy)
+                    const ux = dx / (dist || 1)
+                    const uy = dy / (dist || 1)
+                    const nx = -uy
+                    const ny = ux
+                    const segments = 20
+                    const amplitude = Math.min(dist * 0.12, 5)
+                    const points: string[] = []
+                    for (let i = 0; i <= segments; i++) {
+                      const t = i / segments
+                      const baseX = from.x + dx * t
+                      const baseY = from.y + dy * t
+                      const wave = Math.sin(t * Math.PI * 4) * amplitude * (1 - t * 0.3)
+                      points.push(`${baseX + nx * wave},${baseY + ny * wave}`)
+                    }
+                    const headSize = 2
+                    const hx = to.x
+                    const hy = to.y
+                    return (
+                      <g key={q.id}>
+                        <polyline
+                          points={points.join(' ')}
+                          fill="none"
+                          stroke="var(--color-snake)"
+                          strokeWidth="1.5"
+                          strokeOpacity="0.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <polygon
+                          points={`${hx},${hy} ${hx - ux * headSize + nx * headSize * 0.6},${hy - uy * headSize + ny * headSize * 0.6} ${hx - ux * headSize - nx * headSize * 0.6},${hy - uy * headSize - ny * headSize * 0.6}`}
+                          fill="var(--color-snake)"
+                          fillOpacity="0.85"
+                        />
+                        <circle cx={hx - ux * 0.8 + nx * 0.5} cy={hy - uy * 0.8 + ny * 0.5} r="0.4" fill="#fff" />
+                        <circle cx={hx - ux * 0.8 - nx * 0.5} cy={hy - uy * 0.8 - ny * 0.5} r="0.4" fill="#fff" />
+                      </g>
+                    )
+                  }
+
+                  // Ladder
                   const dx = to.x - from.x
                   const dy = to.y - from.y
                   const dist = Math.sqrt(dx * dx + dy * dy)
-                  const curvature = Math.min(dist * 0.3, 12)
                   const nx = -dy / (dist || 1)
                   const ny = dx / (dist || 1)
-                  const cx = (from.x + to.x) / 2 + nx * curvature
-                  const cy = (from.y + to.y) / 2 + ny * curvature
+                  const railGap = 2
+                  const rungCount = Math.max(2, Math.round(dist / 8))
 
                   return (
-                    <path
-                      key={q.id}
-                      d={`M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="1"
-                      strokeOpacity="0.7"
-                      strokeLinecap="round"
-                      markerEnd={markerId}
-                    />
+                    <g key={q.id}>
+                      <line
+                        x1={from.x + nx * railGap} y1={from.y + ny * railGap}
+                        x2={to.x + nx * railGap} y2={to.y + ny * railGap}
+                        stroke="var(--color-ladder)" strokeWidth="0.8" strokeOpacity="0.8"
+                        strokeLinecap="round"
+                      />
+                      <line
+                        x1={from.x - nx * railGap} y1={from.y - ny * railGap}
+                        x2={to.x - nx * railGap} y2={to.y - ny * railGap}
+                        stroke="var(--color-ladder)" strokeWidth="0.8" strokeOpacity="0.8"
+                        strokeLinecap="round"
+                      />
+                      {Array.from({ length: rungCount }, (_, i) => {
+                        const t = (i + 1) / (rungCount + 1)
+                        const rx = from.x + dx * t
+                        const ry = from.y + dy * t
+                        return (
+                          <line
+                            key={i}
+                            x1={rx + nx * railGap} y1={ry + ny * railGap}
+                            x2={rx - nx * railGap} y2={ry - ny * railGap}
+                            stroke="var(--color-ladder)" strokeWidth="0.6" strokeOpacity="0.7"
+                            strokeLinecap="round"
+                          />
+                        )
+                      })}
+                    </g>
                   )
                 })}
               </svg>
