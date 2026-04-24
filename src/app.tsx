@@ -11,8 +11,8 @@ type Page = 'poc' | 'complete' | 'credits'
 
 function getPageFromHash(): Page {
   const hash = window.location.hash.replace('#', '')
-  if (hash === 'complete' || hash === 'credits') return hash
-  return 'poc'
+  if (hash === 'poc' || hash === 'credits') return hash
+  return 'complete'
 }
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
   const confettiFired = useRef(false)
 
   const navigate = (p: Page) => {
-    window.location.hash = p === 'poc' ? '' : p
+    window.location.hash = p === 'complete' ? '' : p
     setPage(p)
   }
 
@@ -46,7 +46,7 @@ function App() {
   }, [state.gameOver])
 
   if (page === 'credits') {
-    return <Credits onBack={() => navigate('poc')} />
+    return <Credits onBack={() => navigate('complete')} />
   }
 
   if (page === 'poc') {
