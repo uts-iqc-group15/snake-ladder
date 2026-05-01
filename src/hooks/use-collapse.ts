@@ -4,8 +4,9 @@ import { useMemoizedFn } from 'ahooks'
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import { QUBIT_CONFIGS, TOTAL_CELLS } from '@/constants/board'
 import { sendToQuokka } from '@/lib/quokka'
-import { buildSingleQubitQASM, buildEntangledQASM } from '@/lib/qasm-builder'
+import { buildSingleQubitQASM } from '@/lib/qasm-builder'
 import { computeDisplacement, rollDie } from '@/lib/game-helpers'
+import type { EntanglementStrategy } from '@/lib/entanglement-strategy'
 import type {
   CollapseParams,
   CollapseResult,
@@ -24,6 +25,7 @@ interface UseCollapseDeps {
     toCell: number,
     isLadder: boolean,
   ) => Promise<void>
+  entanglementStrategy: EntanglementStrategy
 }
 
 export interface UseCollapseReturn {
@@ -35,6 +37,7 @@ export function useCollapse({
   stateRef,
   addLog,
   slideToCell,
+  entanglementStrategy,
 }: UseCollapseDeps): UseCollapseReturn {
   const mutateRef = useRef<((params: CollapseParams) => void) | null>(null)
 
@@ -147,39 +150,39 @@ export function useCollapse({
 
       try {
         if (config.entangled && qubit.entangledPartnerId) {
-          const qasm = buildEntangledQASM()
-          addLog('info', `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell}...`)
-          addLog('info', `Circuit: H→CNOT creates Bell state (|00⟩+|11⟩)/√2`)
-          addLog('info', `Outcomes: 00(50%)=both ladders, 11(50%)=both snakes`)
+          const partner = stateRef.current.qubits.find(
+            (q) => q.id === qubit.entangledPartnerId,
+          )
+          const partnerConfig = partner ? QUBIT_CONFIGS[partner.configIndex] : config
+          const ctx = {
+            ladderProbA: config.ladderProb,
+            ladderProbB: partnerConfig.ladderProb,
+          }
+          const qasm = entanglementStrategy.buildQASM(ctx)
+          addLog(
+            'info',
+            `Measuring ENTANGLED qubit [${config.label}] at cell ${qubit.cell} via ${entanglementStrategy.label}...`,
+          )
+          for (const line of entanglementStrategy.describe(ctx)) addLog('info', line)
           addLog('qasm', qasm)
 
           const result = await sendToQuokka(qasm)
           const [m0, m1] = [result[0][0], result[0][1]]
+          const outcome = entanglementStrategy.parseResult(m0, m1)
 
-          if (m0 === 0 && m1 === 0) {
+          if (outcome === 'ladder') {
             addLog('result', `Entangled: [${m0},${m1}] → Both Ladders!`)
-            return {
-              qubitId: qubit.id,
-              outcome: 'ladder',
-              partnerId: qubit.entangledPartnerId,
-              partnerOutcome: 'ladder',
-            }
-          }
-          if (m0 === 1 && m1 === 1) {
+          } else if (outcome === 'snake') {
             addLog('result', `Entangled: [${m0},${m1}] → Both Snakes!`)
-            return {
-              qubitId: qubit.id,
-              outcome: 'snake',
-              partnerId: qubit.entangledPartnerId,
-              partnerOutcome: 'snake',
-            }
+          } else {
+            addLog('result', `Entangled: [${m0},${m1}] → Interference! Nothing happens.`)
           }
-          addLog('result', `Entangled: [${m0},${m1}] → Interference! Nothing happens.`)
+
           return {
             qubitId: qubit.id,
-            outcome: 'interference',
+            outcome,
             partnerId: qubit.entangledPartnerId,
-            partnerOutcome: 'interference',
+            partnerOutcome: outcome,
           }
         }
 

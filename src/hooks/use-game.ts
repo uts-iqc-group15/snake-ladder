@@ -5,11 +5,19 @@ import {
   INITIAL_STATE,
   resetQubitIdCounter,
 } from '@/lib/game-helpers'
+import {
+  DEFAULT_ENTANGLEMENT_STRATEGY,
+  type EntanglementStrategy,
+} from '@/lib/entanglement-strategy'
 import type { GameState, LogEntry } from '@/types/game'
 import { useGameAnimations } from '@/hooks/use-game-animations'
 import { useCollapse } from '@/hooks/use-collapse'
 import { usePlay } from '@/hooks/use-play'
 import { useSetup } from '@/hooks/use-setup'
+
+interface UseGameOptions {
+  entanglementStrategy?: EntanglementStrategy
+}
 
 export type {
   GamePhase,
@@ -20,7 +28,9 @@ export type {
   CollapseResult,
 } from '@/types/game'
 
-export function useGame() {
+export function useGame(options: UseGameOptions = {}) {
+  const entanglementStrategy =
+    options.entanglementStrategy ?? DEFAULT_ENTANGLEMENT_STRATEGY
   const [state, setState] = useState<GameState>({ ...INITIAL_STATE })
   const stateRef = useLatest(state)
   const logsRef = useRef<LogEntry[]>([])
@@ -38,6 +48,7 @@ export function useGame() {
     stateRef,
     addLog,
     slideToCell,
+    entanglementStrategy,
   })
 
   const { selectQubit, placeQubit, randomPlaceAll, confirmPass } = useSetup(setState)
