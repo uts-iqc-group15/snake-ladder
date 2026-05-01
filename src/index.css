@@ -16,6 +16,8 @@
   /* Game Accents */
   --color-snake: #c04530;
   --color-ladder: #2d6a4f;
+  --color-snake-entangled: #8c3568;
+  --color-ladder-entangled: #3a7a85;
   --color-player-1: #9b2335;
   --color-player-2: #2c4a7c;
   --color-success: #2d6a4f;

@@ -96,11 +96,17 @@ export function Board({
                   : isLight
                     ? 'bg-board-light'
                     : 'bg-board-dark'
+            const qubitEntangled =
+              !!qubitHere && QUBIT_CONFIGS[qubitHere.configIndex].entangled
             let tintClass = ''
             if (qubitHere?.collapsed === 'snake') {
-              tintClass = 'bg-[rgba(192,69,48,0.12)]'
+              tintClass = qubitEntangled
+                ? 'bg-[rgba(140,53,104,0.14)]'
+                : 'bg-[rgba(192,69,48,0.12)]'
             } else if (qubitHere?.collapsed === 'ladder') {
-              tintClass = 'bg-[rgba(45,106,79,0.12)]'
+              tintClass = qubitEntangled
+                ? 'bg-[rgba(58,122,133,0.14)]'
+                : 'bg-[rgba(45,106,79,0.12)]'
             } else if (isSetup && isValidTarget) {
               tintClass = 'bg-[rgba(255,255,255,0.04)]'
             }
@@ -109,10 +115,16 @@ export function Board({
             const isDestination = connections.some((q) => q.destinationCell === num)
             if (isDestination && !tintClass) {
               const srcQubit = connections.find((q) => q.destinationCell === num)
+              const srcEntangled =
+                !!srcQubit && QUBIT_CONFIGS[srcQubit.configIndex].entangled
               if (srcQubit?.collapsed === 'snake') {
-                tintClass = 'bg-[rgba(192,69,48,0.08)]'
+                tintClass = srcEntangled
+                  ? 'bg-[rgba(140,53,104,0.10)]'
+                  : 'bg-[rgba(192,69,48,0.08)]'
               } else if (srcQubit?.collapsed === 'ladder') {
-                tintClass = 'bg-[rgba(45,106,79,0.08)]'
+                tintClass = srcEntangled
+                  ? 'bg-[rgba(58,122,133,0.10)]'
+                  : 'bg-[rgba(45,106,79,0.08)]'
               }
             }
 
@@ -196,6 +208,13 @@ export function Board({
             const from = cellToPercent(q.cell)
             const to = cellToPercent(q.destinationCell!)
             const isSnake = q.collapsed === 'snake'
+            const isEntangled = QUBIT_CONFIGS[q.configIndex].entangled
+            const snakeStroke = isEntangled
+              ? 'var(--color-snake-entangled)'
+              : 'var(--color-snake)'
+            const ladderStroke = isEntangled
+              ? 'var(--color-ladder-entangled)'
+              : 'var(--color-ladder)'
 
             if (isSnake) {
               // Snake: wavy sinusoidal body + triangle head
@@ -225,7 +244,7 @@ export function Board({
                   <polyline
                     points={points.join(' ')}
                     fill="none"
-                    stroke="var(--color-snake)"
+                    stroke={snakeStroke}
                     strokeWidth="1"
                     strokeOpacity="0.75"
                     strokeLinecap="round"
@@ -234,7 +253,7 @@ export function Board({
                   {/* Snake head */}
                   <polygon
                     points={`${hx},${hy} ${hx - ux * headSize + nx * headSize * 0.6},${hy - uy * headSize + ny * headSize * 0.6} ${hx - ux * headSize - nx * headSize * 0.6},${hy - uy * headSize - ny * headSize * 0.6}`}
-                    fill="var(--color-snake)"
+                    fill={snakeStroke}
                     fillOpacity="0.85"
                   />
                   {/* Snake eyes */}
@@ -259,14 +278,14 @@ export function Board({
                 <line
                   x1={from.x + nx * railGap} y1={from.y + ny * railGap}
                   x2={to.x + nx * railGap} y2={to.y + ny * railGap}
-                  stroke="var(--color-ladder)" strokeWidth="0.5" strokeOpacity="0.8"
+                  stroke={ladderStroke} strokeWidth="0.5" strokeOpacity="0.8"
                   strokeLinecap="round"
                 />
                 {/* Right rail */}
                 <line
                   x1={from.x - nx * railGap} y1={from.y - ny * railGap}
                   x2={to.x - nx * railGap} y2={to.y - ny * railGap}
-                  stroke="var(--color-ladder)" strokeWidth="0.5" strokeOpacity="0.8"
+                  stroke={ladderStroke} strokeWidth="0.5" strokeOpacity="0.8"
                   strokeLinecap="round"
                 />
                 {/* Rungs */}
@@ -279,7 +298,7 @@ export function Board({
                       key={i}
                       x1={rx + nx * railGap} y1={ry + ny * railGap}
                       x2={rx - nx * railGap} y2={ry - ny * railGap}
-                      stroke="var(--color-ladder)" strokeWidth="0.4" strokeOpacity="0.7"
+                      stroke={ladderStroke} strokeWidth="0.4" strokeOpacity="0.7"
                       strokeLinecap="round"
                     />
                   )
