@@ -1,16 +1,19 @@
 import type { GameState } from '@/hooks/use-game'
+import { useDebugMode } from '@/hooks/use-debug-mode'
 import { QUBIT_CONFIGS } from '@/constants/board'
 import { Dice } from '@/components/dice'
+import { QubitIcon } from '@/components/qubit-icon'
 
 interface ControlsProps {
   state: GameState
-  onRoll: () => void
+  onRoll: (forced?: number) => void
   onReset: () => void
   onSelectQubit: (configIndex: number) => void
   onRandomPlace: () => void
 }
 
 export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace }: ControlsProps) {
+  const debug = useDebugMode()
   const {
     phase,
     currentPlayer,
@@ -64,7 +67,7 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
                   }`}
                   onClick={() => onSelectQubit(configIdx)}
                 >
-                  <span className="text-base">{config.entangled ? '\u269B' : '\u2B50'}</span>
+                  <QubitIcon entangled={config.entangled} className="text-base" />
                   <span>
                     [{config.label}]
                     {config.entangled && (
@@ -113,11 +116,32 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
           {/* Roll button */}
           <button
             className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] bg-player-1 cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
-            onClick={onRoll}
+            onClick={() => onRoll()}
             disabled={isRolling || isCollapsing || gameOver}
           >
             {isCollapsing ? 'Measuring...' : 'Roll Dice'}
           </button>
+
+          {/* Debug: fixed-step picker */}
+          {debug && (
+            <div className="flex flex-col gap-1.5">
+              <div className="text-[0.65rem] text-text-secondary uppercase tracking-wider text-center">
+                Debug: Force Move
+              </div>
+              <div className="grid grid-cols-6 gap-1">
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <button
+                    key={n}
+                    className="py-1.5 text-sm font-mono font-bold text-text rounded border border-[var(--color-border)] bg-transparent cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={() => onRoll(n)}
+                    disabled={isRolling || isCollapsing || gameOver}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 

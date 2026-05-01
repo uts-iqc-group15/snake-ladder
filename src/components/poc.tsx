@@ -1,6 +1,8 @@
 import { usePocGame } from '@/hooks/use-poc-game'
 import { Dice } from '@/components/dice'
 import { QuantumLog } from '@/components/quantum-log'
+import { QubitIcon } from '@/components/qubit-icon'
+import { FaCheck, FaXmark } from 'react-icons/fa6'
 
 const BOARD_SIZE = 4
 
@@ -149,10 +151,10 @@ export function Poc() {
 
                       {qubitHere && qubitHere.collapsed === null && (
                         <span
-                          className="absolute bottom-1 right-1 text-xl animate-quantum-shimmer"
+                          className="absolute bottom-1 right-1 text-xl text-text animate-quantum-shimmer"
                           title={`P${qubitHere.owner + 1}'s Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]`}
                         >
-                          {'\u2B50'}
+                          <QubitIcon />
                         </span>
                       )}
 
@@ -309,7 +311,7 @@ export function Poc() {
                         }`}
                         onClick={() => selectQubit(idx)}
                       >
-                        <span className="text-base">{'\u2B50'}</span>
+                        <QubitIcon className="text-base" />
                         <span>[{config.label}]</span>
                       </button>
                     )
@@ -409,14 +411,21 @@ export function Poc() {
           <div className="flex items-center justify-center gap-6 text-xs text-text-secondary">
             {state.qubits.map((q) => {
               const config = QUBIT_CONFIGS[q.configIndex]
-              const icon = q.collapsed
-                ? q.collapsed === 'ladder'
-                  ? '\u2705'
-                  : '\u274C'
-                : '\u2B50'
+              const iconColor =
+                q.collapsed === 'ladder'
+                  ? 'text-ladder'
+                  : q.collapsed === 'snake'
+                    ? 'text-snake'
+                    : 'text-text'
               return (
                 <span key={q.id} className="flex items-center gap-1.5">
-                  <span>{icon}</span>
+                  {q.collapsed === 'ladder' ? (
+                    <FaCheck className={iconColor} />
+                  ) : q.collapsed === 'snake' ? (
+                    <FaXmark className={iconColor} />
+                  ) : (
+                    <QubitIcon className={iconColor} />
+                  )}
                   P{q.owner + 1} {'\u2192'} Cell {q.cell} [{config.label}]
                   {q.collapsed && ` → ${q.collapsed}`}
                 </span>

@@ -1,6 +1,7 @@
 import { BOARD_SIZE, TOTAL_CELLS, QUBIT_CONFIGS, PLACEMENT_MIN, PLACEMENT_MAX } from '@/constants/board'
 import { cellToCoord } from '@/constants/board'
 import type { PlacedQubit, GamePhase } from '@/hooks/use-game'
+import { QubitIcon } from '@/components/qubit-icon'
 
 interface BoardProps {
   positions: [number, number]
@@ -134,15 +135,14 @@ export function Board({
                 {/* Qubit indicators */}
                 {showQubit && qubitHere.collapsed === null && (
                   <span
-                    className="absolute bottom-0 right-0.5 text-[0.9rem] animate-quantum-shimmer"
-                    aria-hidden="true"
+                    className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] text-text animate-quantum-shimmer"
                     title={
                       isOwnQubit
                         ? `Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]`
                         : 'Quantum item'
                     }
                   >
-                    {QUBIT_CONFIGS[qubitHere.configIndex].entangled ? '\u269B' : '\u2B50'}
+                    <QubitIcon entangled={QUBIT_CONFIGS[qubitHere.configIndex].entangled} />
                   </span>
                 )}
                 {qubitHere?.collapsed === 'interference' && (
