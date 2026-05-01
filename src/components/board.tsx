@@ -1,3 +1,4 @@
+import { LuWaves } from 'react-icons/lu'
 import { BOARD_SIZE, TOTAL_CELLS, QUBIT_CONFIGS, PLACEMENT_MIN, PLACEMENT_MAX } from '@/constants/board'
 import { cellToCoord } from '@/constants/board'
 import type { PlacedQubit, GamePhase } from '@/hooks/use-game'
@@ -161,10 +162,10 @@ export function Board({
                 )}
                 {qubitHere?.collapsed === 'interference' && (
                   <span
-                    className="absolute bottom-0 right-0.5 text-[0.9rem] opacity-40"
-                    aria-hidden="true"
+                    className="absolute bottom-0.5 right-0.5 text-[1.1rem] lg:text-[1.25rem] text-text opacity-40"
+                    title="Quantum interference — both entangled qubits cancelled out"
                   >
-                    &#x1F4A8;
+                    <LuWaves aria-label="Interference" />
                   </span>
                 )}
 
