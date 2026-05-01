@@ -68,6 +68,7 @@ function App() {
             currentPlayer={state.currentPlayer}
             phase={state.phase}
             selectedConfigIndex={state.selectedConfigIndex}
+            slidingPlayer={state.slidingPlayer}
             onCellClick={placeQubit}
           />
           <Controls

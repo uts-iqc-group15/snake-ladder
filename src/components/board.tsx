@@ -9,6 +9,7 @@ interface BoardProps {
   currentPlayer: 0 | 1
   phase: GamePhase
   selectedConfigIndex: number | null
+  slidingPlayer?: 0 | 1 | null
   onCellClick?: (cell: number) => void
 }
 
@@ -37,6 +38,7 @@ export function Board({
   currentPlayer,
   phase,
   selectedConfigIndex,
+  slidingPlayer,
   onCellClick,
 }: BoardProps) {
   const cells: number[][] = []
@@ -158,12 +160,20 @@ export function Board({
                 {showTokens && (
                   <div className="absolute inset-0 flex items-center justify-center gap-0.5 pointer-events-none">
                     {p1Here && (
-                      <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                      <span
+                        className={`flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 ${
+                          slidingPlayer === 0 ? '' : 'animate-token-move'
+                        }`}
+                      >
                         1
                       </span>
                     )}
                     {p2Here && (
-                      <span className="flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 animate-token-move">
+                      <span
+                        className={`flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 ${
+                          slidingPlayer === 1 ? '' : 'animate-token-move'
+                        }`}
+                      >
                         2
                       </span>
                     )}

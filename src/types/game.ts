@@ -27,6 +27,7 @@ export interface GameState {
   message: string
   isRolling: boolean
   isCollapsing: boolean
+  slidingPlayer: 0 | 1 | null
   gameOver: boolean
   logs: LogEntry[]
 }

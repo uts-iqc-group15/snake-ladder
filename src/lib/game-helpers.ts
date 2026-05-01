@@ -10,8 +10,8 @@ import {
 import type { GameState, LogEntry, PlacedQubit } from '@/types/game'
 
 export const HOP_MS = 140
-export const LADDER_STEP_MS = 130
-export const SNAKE_STEP_MS = 90
+export const LADDER_STEP_MS = 70
+export const SNAKE_STEP_MS = 60
 
 export const INITIAL_SETUP: [number[], number[]] = [
   [0, 1, 2, 3, 4],
@@ -29,6 +29,7 @@ export const INITIAL_STATE: GameState = {
   message: 'Player 1: Select a qubit and place it on the board',
   isRolling: false,
   isCollapsing: false,
+  slidingPlayer: null,
   gameOver: false,
   logs: [],
 }
