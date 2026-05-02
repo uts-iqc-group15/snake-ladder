@@ -40,22 +40,38 @@ export function useCollapse({
   entanglementStrategy,
 }: UseCollapseDeps): UseCollapseReturn {
   const mutateRef = useRef<((params: CollapseParams) => void) | null>(null)
+  const chainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const applyCollapseToState = useMemoizedFn(
     async (data: CollapseResult, player: 0 | 1, targetCell: number) => {
       const { qubitId, outcome, partnerId, partnerOutcome } = data
 
       if (outcome === 'interference') {
+        // Partner may still be a real snake/ladder when m0=1, m1=0 (Sarah's
+        // 4-qubit design): preset its destinationCell so a future visit slides.
+        const partnerSettled: 'snake' | 'ladder' | undefined =
+          partnerId && partnerOutcome && partnerOutcome !== 'interference'
+            ? (partnerOutcome as 'snake' | 'ladder')
+            : undefined
+        const partnerCell = partnerSettled
+          ? stateRef.current.qubits.find((q) => q.id === partnerId)?.cell
+          : undefined
+        const partnerDest =
+          partnerSettled && partnerCell !== undefined
+            ? computeDisplacement(partnerSettled, partnerCell, addLog)
+            : undefined
+
         setState((prev) => ({
           ...prev,
           qubits: prev.qubits.map((q) => {
             if (q.id === qubitId) return { ...q, collapsed: 'interference' as const }
-            if (
-              partnerId &&
-              q.id === partnerId &&
-              partnerOutcome === 'interference'
-            ) {
-              return { ...q, collapsed: 'interference' as const }
+            if (partnerId && q.id === partnerId) {
+              if (partnerSettled && partnerDest !== undefined) {
+                return { ...q, collapsed: partnerSettled, destinationCell: partnerDest }
+              }
+              if (partnerOutcome === 'interference') {
+                return { ...q, collapsed: 'interference' as const }
+              }
             }
             return q
           }),
@@ -131,7 +147,9 @@ export function useCollapse({
           isCollapsing: true,
           message: `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! → cell ${newCell} | Chain reaction...`,
         }))
-        setTimeout(() => {
+        if (chainTimerRef.current) clearTimeout(chainTimerRef.current)
+        chainTimerRef.current = setTimeout(() => {
+          chainTimerRef.current = null
           mutateRef.current?.({ qubit: chainQubit, player, targetCell: newCell })
         }, 300)
         return
@@ -186,8 +204,13 @@ export function useCollapse({
           addLog('qasm', qasm)
 
           const result = await sendToQuokka(qasm)
-          const [m0, m1] = [result[0][0], result[0][1]]
-          const parsed = entanglementStrategy.parseResult(m0, m1)
+          const [m0, m1, m2, m3] = [
+            result[0][0],
+            result[0][1],
+            result[0][2],
+            result[0][3],
+          ]
+          const parsed = entanglementStrategy.parseResult(result[0])
 
           const playerLabel =
             parsed.playerOutcome === 'ladder'
@@ -201,9 +224,11 @@ export function useCollapse({
               : parsed.partnerOutcome === 'interference'
                 ? 'partner cancelled'
                 : `partner = ${parsed.partnerOutcome}`
+          const m2Part = m2 !== undefined ? `, m2=${m2}` : ''
+          const m3Part = m3 !== undefined ? `, m3=${m3}` : ''
           addLog(
             'result',
-            `Entangled [m0=${m0}, m1=${m1}] → ${playerLabel}; ${partnerLabel}`,
+            `Entangled [m0=${m0}, m1=${m1}${m2Part}${m3Part}] → ${playerLabel}; ${partnerLabel}`,
           )
 
           return {
@@ -262,6 +287,15 @@ export function useCollapse({
   useEffect(() => {
     mutateRef.current = collapseMutation.mutate
   }, [collapseMutation.mutate])
+
+  useEffect(() => {
+    return () => {
+      if (chainTimerRef.current) {
+        clearTimeout(chainTimerRef.current)
+        chainTimerRef.current = null
+      }
+    }
+  }, [])
 
   return { collapseMutation }
 }

@@ -4,32 +4,72 @@
 
 ## Summary
 
-Replaced the "Neon Arcade" design system with the "Craft Board" warm, tactile board game design across all 6 files. All neon/glow/glass references removed. Build passes clean with 0 errors.
+Implemented Sarah's 4-qubit quantum circuit in the Snake-Ladder game. The biased Bell strategy now uses a 4-qubit QASM circuit where q0/q1 control visibility (interference flags) and q2/q3 form a pure Bell pair that determines snake-or-ladder type. The `parseResult` interface was updated to accept a variable-length measurements array to support both 2-qubit and 4-qubit strategies cleanly.
 
 ## Files Changed
 
-- `/Users/gracefullight/workspace/snake-ladder/src/index.css` — Complete rewrite: new `@theme` block with Craft Board tokens, removed all neon keyframes/utilities, added `card-panel` and `paper-bg` utilities, kept `board-responsive` and `prefers-reduced-motion`, kept `animate-dice-roll`
-- `/Users/gracefullight/workspace/snake-ladder/src/app.tsx` — Removed all floating orbs, gradient background div, scanlines class. Now uses `paper-bg`, `font-display`, `text-text`, `font-bold`, correct font sizes
-- `/Users/gracefullight/workspace/snake-ladder/src/components/board.tsx` — Updated shadow to `shadow-[var(--shadow-board)]`, cell tints via `bg-[rgba(...)]` classes, cell numbers use `text-text-cell`, tokens use `shadow-[var(--shadow-token)]` + `border-2 border-white/30` + `text-text-inverse`
-- `/Users/gracefullight/workspace/snake-ladder/src/components/controls.tsx` — Replaced `glass-panel` with `card-panel`, removed all `style` props with glow/text-shadow, player tint via Tailwind class, message color computed from message content string matching, solid crimson roll button, outline reset button
-- `/Users/gracefullight/workspace/snake-ladder/src/components/dice.tsx` — Wood gradient background, warm brown border, dark wood dots, subtle table shadow, no neon
-- `/Users/gracefullight/workspace/snake-ladder/index.html` — Removed all 3 Google Fonts lines (2x preconnect + stylesheet link)
+- `/Users/gracefullight/workspace/snake-ladder/src/lib/entanglement-strategy.ts`
+  - `EntanglementStrategy.parseResult` signature changed from `(m0, m1) => ...` to `(measurements: readonly number[]) => ...`
+  - `biasedBellStrategy.label` updated to `'Biased visibility + Bell type (4 qubits)'`
+  - `biasedBellStrategy.buildQASM` now emits 4-qubit QASM (qreg q[4], creg c[4], adds h q[2], cx q[2], q[3], and 4 measure statements)
+  - `biasedBellStrategy.describe` updated to document all 4 qubits and their semantics
+  - `biasedBellStrategy.parseResult` implements the 7-outcome table from Sarah's spec
+  - `basicBellStrategy.parseResult` updated to new signature (destructures from array)
+
+- `/Users/gracefullight/workspace/snake-ladder/src/hooks/use-collapse.ts`
+  - Reads m2 and m3 from `result[0][2]` and `result[0][3]`
+  - Passes full `result[0]` array to `entanglementStrategy.parseResult`
+  - Log line updated to include m2 and m3 when present
+
+- `/Users/gracefullight/workspace/snake-ladder/src/lib/__tests__/entanglement-strategy.test.ts` (new file)
+  - 13 unit tests covering all 8 outcome combinations for `biasedBellStrategy.parseResult`
+  - QASM emission tests (with/without rz gate)
+  - `basicBellStrategy.parseResult` regression tests
+
+## New QASM String (default 50/50 entangled cell, thetaA=0.862, thetaB=1.58, phase=0.72)
+
+```
+OPENQASM 2.0;
+qreg q[4];
+creg c[4];
+ry(1.580) q[1];
+ry(0.862) q[0];
+z q[1];
+rz(0.720) q[0];
+h q[0];
+cx q[0], q[1];
+h q[2];
+cx q[2], q[3];
+measure q[0] -> c[0];
+measure q[1] -> c[1];
+measure q[2] -> c[2];
+measure q[3] -> c[3];
+```
+
+## Test Results
+
+- Test files: 3 passed
+- Tests total: 21 passed (0 failed)
+  - `src/lib/__tests__/entanglement-strategy.test.ts`: 13 tests (new)
+  - `src/lib/__tests__/game-helpers.test.ts`: 7 tests (pre-existing, unchanged)
+  - `src/hooks/__tests__/use-game.test.tsx`: 1 test (pre-existing, unchanged)
+- TypeScript typecheck: 0 errors
 
 ## Acceptance Criteria Checklist
 
-- [x] `@theme` block replaced with Craft Board tokens
-- [x] ALL old utilities removed: `scanlines`, `glass-panel`, `animate-neon-pulse`, `animate-orb-drift-slow`, `animate-orb-drift-fast`, `animate-token-move`
-- [x] ALL old keyframes removed: `neon-pulse`, `token-move`, `orb-drift`
-- [x] `dice-roll` keyframe and `animate-dice-roll` utility kept
-- [x] `board-responsive` sizing rules kept
-- [x] `prefers-reduced-motion` kept
-- [x] `card-panel` utility added
-- [x] `paper-bg` utility added with SVG noise
-- [x] `app.tsx`: floating orbs removed, gradient bg removed, scanlines removed, `paper-bg` applied, Georgia display font, correct font sizes, no neon
-- [x] `board.tsx`: `shadow-[var(--shadow-board)]`, maple/walnut cells, snake/ladder tints via rgba background, `text-text-cell`, no neon token glow
-- [x] `controls.tsx`: `card-panel`, no textShadow style props, player tint classes, solid roll button, outline reset button, message color via Tailwind classes
-- [x] `dice.tsx`: wood gradient, warm border, dark brown dots, subtle shadow, no neon glow
-- [x] `index.html`: Google Fonts lines removed
-- [x] Game logic unchanged
-- [x] `bun run build` passes with 0 errors
-- [x] Zero remaining neon/glow/glass references (verified with grep)
+- [x] `biasedBellStrategy.buildQASM` emits 4-qubit QASM matching Sarah's circuit
+- [x] `biasedBellStrategy.parseResult` implements all 7 outcome combinations from the spec table
+- [x] `parseResult` signature changed to `(measurements: readonly number[])` - variable-length, both strategies adapted
+- [x] `use-collapse.ts` reads m2/m3 and passes full result row to parseResult
+- [x] Log line in use-collapse.ts includes m2/m3 when present
+- [x] Partner is never null for biased strategy (always snake/ladder/interference)
+- [x] `use-play.ts` collapsedQubit branch untouched and verified correct
+- [x] `basicBellStrategy` keeps 2-qubit semantics (ignores m2/m3)
+- [x] No changes to `src/types/game.ts`, `src/constants/board.ts`
+- [x] `bun run typecheck` passes
+- [x] `bun run test` passes (21/21)
+- [x] Unit tests for biasedBellStrategy.parseResult covering required cases
+
+## Deviations from Spec
+
+None. All requirements implemented as specified.

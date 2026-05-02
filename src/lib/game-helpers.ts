@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   QUBIT_CONFIGS,
+  TOTAL_CELLS,
   X_VECTOR_TABLE,
   Y_VECTOR_MATRIX,
   cellToCoord,
@@ -86,5 +87,17 @@ export function computeDisplacement(
   const coord = cellToCoord(targetCell)
   const newCol = wrapCol(coord.col + dx)
   const newRow = clamp(coord.row + dy, 0, BOARD_SIZE - 1)
-  return coordToCell(newCol, newRow)
+  const newCell = coordToCell(newCol, newRow)
+
+  if (outcome === 'snake' && newCell >= targetCell) {
+    const adjusted = Math.max(1, targetCell - 1)
+    addLog('info', `Snake clamped: would have landed on ${newCell} (≥ ${targetCell}); falling back to ${adjusted}`)
+    return adjusted
+  }
+  if (outcome === 'ladder' && newCell <= targetCell) {
+    const adjusted = Math.min(TOTAL_CELLS, targetCell + 1)
+    addLog('info', `Ladder clamped: would have landed on ${newCell} (≤ ${targetCell}); falling back to ${adjusted}`)
+    return adjusted
+  }
+  return newCell
 }
