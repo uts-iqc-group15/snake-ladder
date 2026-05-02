@@ -48,14 +48,20 @@ export function useCollapse({
       if (outcome === 'interference') {
         setState((prev) => ({
           ...prev,
-          qubits: prev.qubits.map((q) =>
-            q.id === qubitId || q.id === partnerId
-              ? { ...q, collapsed: 'interference' as const }
-              : q,
-          ),
+          qubits: prev.qubits.map((q) => {
+            if (q.id === qubitId) return { ...q, collapsed: 'interference' as const }
+            if (
+              partnerId &&
+              q.id === partnerId &&
+              partnerOutcome === 'interference'
+            ) {
+              return { ...q, collapsed: 'interference' as const }
+            }
+            return q
+          }),
           isCollapsing: false,
           currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
-          message: 'Quantum interference! Both entangled qubits cancelled out.',
+          message: 'Quantum interference! Nothing happens.',
         }))
         return
       }
@@ -76,6 +82,7 @@ export function useCollapse({
         partnerSettledOutcome && partnerCell !== undefined
           ? computeDisplacement(partnerSettledOutcome, partnerCell, addLog)
           : undefined
+      const partnerCancelled = !!partnerId && partnerOutcome === 'interference'
 
       // Reveal the snake/ladder on the board before sliding the token along it.
       setState((prev) => {
@@ -83,15 +90,16 @@ export function useCollapse({
           if (q.id === qubitId) {
             return { ...q, collapsed: outcome, destinationCell: newCell }
           }
-          if (
-            partnerSettledOutcome &&
-            q.id === partnerId &&
-            partnerDestination !== undefined
-          ) {
-            return {
-              ...q,
-              collapsed: partnerSettledOutcome,
-              destinationCell: partnerDestination,
+          if (partnerId && q.id === partnerId) {
+            if (partnerSettledOutcome && partnerDestination !== undefined) {
+              return {
+                ...q,
+                collapsed: partnerSettledOutcome,
+                destinationCell: partnerDestination,
+              }
+            }
+            if (partnerCancelled) {
+              return { ...q, collapsed: 'interference' as const }
             }
           }
           return q
@@ -148,16 +156,27 @@ export function useCollapse({
     mutationFn: async ({ qubit }) => {
       const config = QUBIT_CONFIGS[qubit.configIndex]
 
+      const partner = qubit.entangledPartnerId
+        ? stateRef.current.qubits.find((q) => q.id === qubit.entangledPartnerId)
+        : undefined
+      const partnerStillEntangled =
+        config.entangled && partner && partner.collapsed === null
+
       try {
-        if (config.entangled && qubit.entangledPartnerId) {
-          const partner = stateRef.current.qubits.find(
-            (q) => q.id === qubit.entangledPartnerId,
-          )
-          const partnerConfig = partner ? QUBIT_CONFIGS[partner.configIndex] : config
-          const ctx = {
-            ladderProbA: config.ladderProb,
-            ladderProbB: partnerConfig.ladderProb,
-          }
+        if (partnerStillEntangled && partner) {
+          const partnerConfig = QUBIT_CONFIGS[partner.configIndex]
+          const params = config.entangledParams
+          const thetaFromProb = (p: number) => 2 * Math.acos(Math.sqrt(p))
+          const ctx = params
+            ? {
+                thetaA: params.thetaA,
+                thetaB: params.thetaB,
+                phase: params.phase,
+              }
+            : {
+                thetaA: thetaFromProb(config.ladderProb),
+                thetaB: thetaFromProb(partnerConfig.ladderProb),
+              }
           const qasm = entanglementStrategy.buildQASM(ctx)
           addLog(
             'info',
@@ -168,27 +187,43 @@ export function useCollapse({
 
           const result = await sendToQuokka(qasm)
           const [m0, m1] = [result[0][0], result[0][1]]
-          const outcome = entanglementStrategy.parseResult(m0, m1)
+          const parsed = entanglementStrategy.parseResult(m0, m1)
 
-          if (outcome === 'ladder') {
-            addLog('result', `Entangled: [${m0},${m1}] → Both Ladders!`)
-          } else if (outcome === 'snake') {
-            addLog('result', `Entangled: [${m0},${m1}] → Both Snakes!`)
-          } else {
-            addLog('result', `Entangled: [${m0},${m1}] → Interference! Nothing happens.`)
-          }
+          const playerLabel =
+            parsed.playerOutcome === 'ladder'
+              ? 'Ladder!'
+              : parsed.playerOutcome === 'snake'
+                ? 'Snake!'
+                : 'Interference (no move)'
+          const partnerLabel =
+            parsed.partnerOutcome === null
+              ? 'partner stays active (will measure on visit)'
+              : parsed.partnerOutcome === 'interference'
+                ? 'partner cancelled'
+                : `partner = ${parsed.partnerOutcome}`
+          addLog(
+            'result',
+            `Entangled [m0=${m0}, m1=${m1}] → ${playerLabel}; ${partnerLabel}`,
+          )
 
           return {
             qubitId: qubit.id,
-            outcome,
+            outcome: parsed.playerOutcome,
             partnerId: qubit.entangledPartnerId,
-            partnerOutcome: outcome,
+            partnerOutcome: parsed.partnerOutcome ?? undefined,
           }
         }
 
         const theta = 2 * Math.acos(Math.sqrt(config.ladderProb))
         const qasm = buildSingleQubitQASM(config.ladderProb)
-        addLog('info', `Measuring qubit [${config.label}] at cell ${qubit.cell}...`)
+        const partnerNote =
+          config.entangled && partner && partner.collapsed !== null
+            ? ' (partner already collapsed — independent measurement)'
+            : ''
+        addLog(
+          'info',
+          `Measuring qubit [${config.label}] at cell ${qubit.cell}${partnerNote}...`,
+        )
         addLog(
           'info',
           `Circuit: ladderProb=${config.ladderProb} → θ=2·arccos(√${config.ladderProb})=${theta.toFixed(4)}rad → ry(${theta.toFixed(4)})`,

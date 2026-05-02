@@ -5,11 +5,23 @@ export const TOTAL_CELLS = BOARD_SIZE * BOARD_SIZE
 export const PLACEMENT_MIN = 6
 export const PLACEMENT_MAX = 95
 
+/**
+ * entangledParams (entangled cells only): direct rotation angles for the biased
+ * Bell circuit `Ry(θ_b) q[1] · Ry(θ_a) q[0] · Z q[1] · Rz(φ) q[0] · H q[0] · CX`.
+ *   thetaA → Ry on q[0] (player's qubit)
+ *   thetaB → Ry on q[1] (partner-appears flag)
+ *   phase  → Rz on q[0] (correlation skew)
+ */
 export interface QubitConfig {
   label: string
   ladderProb: number
   snakeProb: number
   entangled: boolean
+  entangledParams?: {
+    thetaA: number
+    thetaB: number
+    phase: number
+  }
 }
 
 export const QUBIT_CONFIGS: QubitConfig[] = [
@@ -17,7 +29,19 @@ export const QUBIT_CONFIGS: QubitConfig[] = [
   { label: '60/40', ladderProb: 0.6, snakeProb: 0.4, entangled: false },
   { label: '40/60', ladderProb: 0.4, snakeProb: 0.6, entangled: false },
   { label: '10/90', ladderProb: 0.1, snakeProb: 0.9, entangled: false },
-  { label: '50/50', ladderProb: 0.5, snakeProb: 0.5, entangled: true },
+  {
+    // Sarah's circuit: ~40/40/10/10 over (m1 m0) ∈ {00,01,10,11}.
+    // Player marginal P(m0=0)=0.5, partner-appears marginal P(m1=0)=0.8.
+    label: '50/50',
+    ladderProb: 0.5,
+    snakeProb: 0.5,
+    entangled: true,
+    entangledParams: {
+      thetaA: 0.862,
+      thetaB: 1.58,
+      phase: 0.72,
+    },
+  },
 ]
 
 export function isValidPlacement(cell: number, occupiedCells: number[]): boolean {

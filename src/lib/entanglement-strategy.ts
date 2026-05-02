@@ -3,10 +3,24 @@ export type EntanglementOutcome = 'snake' | 'ladder' | 'interference'
 export type EntanglementStrategyName = 'basic' | 'biased'
 
 export interface EntanglementContext {
-  ladderProbA: number
-  ladderProbB: number
+  /** Ry rotation angle (radians) on q[0] — biases the player's qubit. */
+  thetaA: number
+  /** Ry rotation angle (radians) on q[1] — biases the partner-appears flag. */
+  thetaB: number
   /** Optional Rz phase on q[0]. Default 0 (Rz omitted from circuit). */
   phase?: number
+}
+
+/**
+ * playerOutcome: snake/ladder/interference for the qubit the player landed on.
+ * partnerOutcome:
+ *   - 'snake' | 'ladder': partner is jointly resolved (basic Bell).
+ *   - 'interference': partner is cancelled (won't trigger when landed on later).
+ *   - null: partner stays uncollapsed; next visit measures it independently.
+ */
+export interface EntanglementParsed {
+  playerOutcome: EntanglementOutcome
+  partnerOutcome: EntanglementOutcome | null
 }
 
 export interface EntanglementStrategy {
@@ -14,13 +28,7 @@ export interface EntanglementStrategy {
   readonly label: string
   buildQASM(ctx: EntanglementContext): string
   describe(ctx: EntanglementContext): string[]
-  parseResult(m0: number, m1: number): EntanglementOutcome
-}
-
-const sharedParseResult = (m0: number, m1: number): EntanglementOutcome => {
-  if (m0 === 0 && m1 === 0) return 'ladder'
-  if (m0 === 1 && m1 === 1) return 'snake'
-  return 'interference'
+  parseResult(m0: number, m1: number): EntanglementParsed
 }
 
 export const basicBellStrategy: EntanglementStrategy = {
@@ -41,25 +49,38 @@ measure q[1] -> c[1];`
       'Outcomes: 00(50%)=both ladders, 11(50%)=both snakes',
     ]
   },
-  parseResult: sharedParseResult,
+  parseResult(m0, m1) {
+    if (m0 === 0 && m1 === 0) {
+      return { playerOutcome: 'ladder', partnerOutcome: 'ladder' }
+    }
+    if (m0 === 1 && m1 === 1) {
+      return { playerOutcome: 'snake', partnerOutcome: 'snake' }
+    }
+    return { playerOutcome: 'interference', partnerOutcome: 'interference' }
+  },
 }
 
+/**
+ * Biased strategy with split semantics:
+ *   q[0] (player's qubit): 0 → ladder, 1 → snake
+ *   q[1] (partner flag):   0 → partner stays active (re-measured later),
+ *                          1 → partner is cancelled (interference, no movement)
+ */
 export const biasedBellStrategy: EntanglementStrategy = {
   name: 'biased',
-  label: 'Biased Bell (Ry → H → CNOT)',
+  label: 'Biased Bell (Ry → Z → Rz → H → CNOT)',
   buildQASM(ctx) {
-    const thetaA = 2 * Math.acos(Math.sqrt(ctx.ladderProbA))
-    const thetaB = 2 * Math.acos(Math.sqrt(ctx.ladderProbB))
     const phase = ctx.phase ?? 0
+    const fmt = (n: number) => n.toFixed(3)
     const lines = [
       'OPENQASM 2.0;',
       'qreg q[2];',
       'creg c[2];',
-      `ry(${parseFloat(thetaB.toFixed(4))}) q[1];`,
-      `ry(${parseFloat(thetaA.toFixed(4))}) q[0];`,
+      `ry(${fmt(ctx.thetaB)}) q[1];`,
+      `ry(${fmt(ctx.thetaA)}) q[0];`,
       'z q[1];',
     ]
-    if (phase !== 0) lines.push(`rz(${parseFloat(phase.toFixed(4))}) q[0];`)
+    if (phase !== 0) lines.push(`rz(${fmt(phase)}) q[0];`)
     lines.push('h q[0];', 'cx q[0], q[1];')
     lines.push('measure q[0] -> c[0];', 'measure q[1] -> c[1];')
     return lines.join('\n')
@@ -67,12 +88,18 @@ export const biasedBellStrategy: EntanglementStrategy = {
   describe(ctx) {
     const phase = ctx.phase ?? 0
     return [
-      `Circuit: Ry(θ_b)·Ry(θ_a)·Z${phase ? '·Rz(φ)' : ''}·H·CNOT (biased entanglement)`,
-      `Per-qubit bias: P(ladder|A)=${ctx.ladderProbA}, P(ladder|B)=${ctx.ladderProbB}`,
-      'Outcomes: all four basis states possible; 01/10 → interference',
+      `Circuit: Ry(${ctx.thetaB.toFixed(3)}) q[1] · Ry(${ctx.thetaA.toFixed(3)}) q[0] · Z q[1]${
+        phase ? ` · Rz(${phase.toFixed(3)}) q[0]` : ''
+      } · H q[0] · CNOT(q[0],q[1])`,
+      'Mapping: q[0] 0→ladder / 1→snake (player), q[1] 0→partner active / 1→partner cancelled',
     ]
   },
-  parseResult: sharedParseResult,
+  parseResult(m0, m1) {
+    const playerOutcome: EntanglementOutcome = m0 === 0 ? 'ladder' : 'snake'
+    const partnerOutcome: EntanglementOutcome | null =
+      m1 === 0 ? null : 'interference'
+    return { playerOutcome, partnerOutcome }
+  },
 }
 
 export const ENTANGLEMENT_STRATEGIES: Record<
