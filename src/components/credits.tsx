@@ -16,7 +16,7 @@ const TEAM = [
   },
   {
     name: 'Eunkwang Shin',
-    role: 'Prototype',
+    role: 'Prototype / Game Lead',
     email: 'Eunkwang.Shin@student.uts.edu.au',
   },
   {
