@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useGame } from '@/hooks/use-game'
+import { sendToQuokka } from '@/lib/quokka'
 
 vi.mock('@/lib/quokka', () => ({
   // measurement = 1 → snake outcome
@@ -117,5 +118,83 @@ describe('useGame — collapsed snake reuses destinationCell', () => {
 
     // P2 should slide to the SAME destination — not a fresh random one.
     expect(result.current.state.positions[1]).toBe(firstDestination)
+  }, 15000)
+})
+
+describe('useGame — chain reaction through already-collapsed qubits', () => {
+  it('second player landing on a collapsed cell chains through subsequent collapsed cells', async () => {
+    // Single-qubit measurement = 0 → ladder
+    vi.mocked(sendToQuokka).mockResolvedValue([[0]])
+
+    const seed = Array.from({ length: 500 }, (_, k) => ((k * 41 + 17) % 100) / 100)
+    let i = 0
+    vi.spyOn(Math, 'random').mockImplementation(() => seed[i++ % seed.length])
+
+    const { result } = renderHook(() => useGame(), { wrapper })
+
+    const placeAt = async (configIndex: number, cell: number) => {
+      await act(async () => {
+        result.current.selectQubit(configIndex)
+      })
+      await act(async () => {
+        result.current.placeQubit(cell)
+      })
+    }
+
+    // P1 places: non-entangled config 0 at 6 (entry tile), entangled (4) parked
+    // in the back half so it never fires.
+    await placeAt(0, 6)
+    await placeAt(1, 90)
+    await placeAt(2, 91)
+    await placeAt(3, 92)
+    await placeAt(4, 93)
+    await act(async () => {
+      result.current.confirmPass()
+    })
+
+    // P2 places: non-entangled config 0 at 54 (the deterministic landing spot
+    // from cell 6 under this seed), so a chain 6→54→? is reachable.
+    await placeAt(0, 54)
+    await placeAt(1, 80)
+    await placeAt(2, 81)
+    await placeAt(3, 82)
+    await placeAt(4, 83)
+    await act(async () => {
+      result.current.confirmPass()
+    })
+
+    expect(result.current.state.phase).toBe('play')
+    expect(result.current.state.currentPlayer).toBe(0)
+
+    // P1 rolls 5: 1 → 6 → collapse → slide → chain to qubit at 54 → another slide.
+    await act(async () => {
+      await result.current.handleRoll(5)
+    })
+
+    await waitFor(() => {
+      const q6 = result.current.state.qubits.find((q) => q.cell === 6)
+      const q54 = result.current.state.qubits.find((q) => q.cell === 54)
+      expect(q6?.collapsed).toBe('ladder')
+      expect(q6?.destinationCell).toBe(54)
+      expect(q54?.collapsed).toBe('ladder')
+      expect(q54?.destinationCell).toBeDefined()
+      expect(result.current.state.isCollapsing).toBe(false)
+      expect(result.current.state.currentPlayer).toBe(1)
+    }, { timeout: 5000 })
+
+    const finalDest = result.current.state.qubits.find(
+      (q) => q.cell === 54,
+    )!.destinationCell!
+    expect(finalDest).not.toBe(54)
+    expect(finalDest).not.toBe(6)
+
+    // P2 rolls 5: 1 → 6 → must chain 6→54→finalDest, NOT stop at 54.
+    await act(async () => {
+      await result.current.handleRoll(5)
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.positions[1]).toBe(finalDest)
+    }, { timeout: 5000 })
   }, 15000)
 })

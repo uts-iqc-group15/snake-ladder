@@ -114,7 +114,65 @@ export function usePlay({
 
       await slideToCell(player, targetCell, newCell, outcome === 'ladder')
 
-      const gameOver = newCell === TOTAL_CELLS
+      let chainCell = newCell
+      let chainOutcome: 'snake' | 'ladder' = outcome
+      const visited = new Set<number>([targetCell])
+
+      while (chainCell !== TOTAL_CELLS && !visited.has(chainCell)) {
+        visited.add(chainCell)
+        const next = stateRef.current.qubits.find(
+          (q) =>
+            q.cell === chainCell &&
+            (q.collapsed === 'snake' || q.collapsed === 'ladder') &&
+            q.destinationCell !== undefined &&
+            q.destinationCell !== chainCell,
+        )
+        if (!next) break
+
+        const nextOutcome = next.collapsed as 'snake' | 'ladder'
+        const nextDest = next.destinationCell!
+        addLog(
+          'info',
+          `Chain! Player ${player + 1} hit existing ${nextOutcome} at cell ${chainCell} → cell ${nextDest}`,
+        )
+        setState((prev) => ({
+          ...prev,
+          message: `${nextOutcome === 'ladder' ? 'Ladder' : 'Snake'}! ${
+            nextOutcome === 'ladder' ? 'Climbing' : 'Sliding'
+          }... (chain)`,
+        }))
+        await slideToCell(player, chainCell, nextDest, nextOutcome === 'ladder')
+        chainCell = nextDest
+        chainOutcome = nextOutcome
+      }
+
+      const uncollapsedAtFinal =
+        chainCell !== TOTAL_CELLS
+          ? stateRef.current.qubits.find(
+              (q) => q.cell === chainCell && q.collapsed === null,
+            )
+          : undefined
+
+      if (uncollapsedAtFinal) {
+        addLog(
+          'info',
+          `Chain! Player ${player + 1} landed on another qubit at cell ${chainCell}`,
+        )
+        setState((prev) => ({
+          ...prev,
+          isRolling: false,
+          isCollapsing: true,
+          message: `${chainOutcome === 'ladder' ? 'Ladder' : 'Snake'}! → cell ${chainCell} | Chain reaction...`,
+        }))
+        collapseMutation.mutate({
+          qubit: uncollapsedAtFinal,
+          player,
+          targetCell: chainCell,
+        })
+        return
+      }
+
+      const gameOver = chainCell === TOTAL_CELLS
       setState((prev) => ({
         ...prev,
         isRolling: false,
@@ -125,7 +183,7 @@ export function usePlay({
           : ((player === 0 ? 1 : 0) as 0 | 1),
         message: gameOver
           ? `Player ${player + 1} wins!`
-          : `${outcome === 'ladder' ? 'Ladder' : 'Snake'}! → cell ${newCell}`,
+          : `${chainOutcome === 'ladder' ? 'Ladder' : 'Snake'}! → cell ${chainCell}`,
       }))
       return
     }
