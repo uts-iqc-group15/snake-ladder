@@ -116,12 +116,6 @@ function App() {
       <footer className="w-full py-3 text-center flex justify-center gap-4">
         <button
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
-          onClick={() => navigate('poc')}
-        >
-          POC
-        </button>
-        <button
-          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
           onClick={() => navigate('credits')}
         >
           Credits
