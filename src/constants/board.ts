@@ -32,7 +32,7 @@ export const QUBIT_CONFIGS: QubitConfig[] = [
   {
     // Sarah's circuit: ~40/40/10/10 over (m1 m0) ∈ {00,01,10,11}.
     // Player marginal P(m0=0)=0.5, partner-appears marginal P(m1=0)=0.8.
-    label: '50/50',
+    label: 'Entangled',
     ladderProb: 0.5,
     snakeProb: 0.5,
     entangled: true,

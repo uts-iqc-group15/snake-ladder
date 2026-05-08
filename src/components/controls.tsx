@@ -68,11 +68,10 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
                   onClick={() => onSelectQubit(configIdx)}
                 >
                   <QubitIcon entangled={config.entangled} className="text-base" />
-                  <span>
+                  <span
+                    className={config.entangled ? 'text-[var(--color-neon-yellow)]' : undefined}
+                  >
                     [{config.label}]
-                    {config.entangled && (
-                      <span className="ml-1 text-xs text-[var(--color-neon-yellow)]">Entangled</span>
-                    )}
                   </span>
                 </button>
               )
