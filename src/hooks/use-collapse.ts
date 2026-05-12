@@ -77,7 +77,7 @@ export function useCollapse({
           }),
           isCollapsing: false,
           currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
-          message: 'Quantum interference! Nothing happens.',
+          message: 'No effect — turn passes.',
         }))
         return
       }
