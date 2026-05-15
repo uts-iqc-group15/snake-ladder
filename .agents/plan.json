@@ -1,0 +1,127 @@
+{
+  "project_name": "snake-ladder",
+  "description": "Sarah's 4-qubit entanglement circuit reimplementation + first-row snake displacement bug fix",
+  "tech_stack": {
+    "frontend": "React 19 + TypeScript + Vite + Tailwind 4 + ahooks + react-query + Vitest",
+    "backend": "n/a (client-side game; calls Quokka quantum simulator HTTP API)",
+    "mobile": "n/a",
+    "database": "n/a",
+    "infrastructure": "GitHub Pages (auto-deploy via .github/workflows/deploy.yml on push to main)"
+  },
+  "architecture_decisions": [
+    {
+      "decision": "Expand biased Bell strategy to 4 qubits (q0/q1 biased pair for visibility, q2/q3 pure Bell pair for type)",
+      "rationale": "Sarah's full design separates two concerns: q0/q1 decide whether each tile of an entangled pair appears (independent flags with biased marginals), q2/q3 in a |Φ+⟩ Bell state decide snake/ladder type with perfect correlation so both tiles are always the same type",
+      "alternatives_considered": [
+        "Keep 2-qubit circuit and reinterpret bits — rejected because actual cirq notebook screenshot shows 4 qubits",
+        "Run separate 2-qubit measurements per tile — rejected because partner type must be Bell-correlated with player tile"
+      ]
+    },
+    {
+      "decision": "Partner tile is preset to collapsed state ('snake'/'ladder'/'interference') at first measurement instead of staying uncollapsed",
+      "rationale": "With 4-qubit circuit, m2 already determines both tiles' type at first measurement (Bell correlation). Re-running the 4-qubit circuit when partner is later visited would discard that information. Presetting partner to its determined type lets use-play.ts's existing 'collapsed qubit landed-on' branch fire correctly.",
+      "alternatives_considered": [
+        "Leave partner uncollapsed and re-measure on visit — rejected: breaks Bell correlation"
+      ]
+    },
+    {
+      "decision": "Snake outcome must guarantee newCell < targetCell (and ladder must guarantee newCell > targetCell)",
+      "rationale": "Current computeDisplacement clamps row at edges (row 0 for snake, row 9 for ladder), so dy can become 0 and dx-only motion can move the player UP after a snake (e.g., 6 → 8). Fix: post-check and fall back to safe value.",
+      "alternatives_considered": [
+        "Re-roll dice until valid — rejected: nondeterministic and complicates animations",
+        "Disallow entangled qubits in row 0 — rejected: too restrictive"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1",
+      "agent": "frontend",
+      "title": "Implement Sarah's 4-qubit biased Bell circuit + split semantics",
+      "description": "Update src/lib/entanglement-strategy.ts, src/hooks/use-collapse.ts, src/types/game.ts (if needed), and src/constants/board.ts to implement Sarah's full 4-qubit circuit. q0/q1 retain the existing biased gates (Ry(1.580) q[1], Ry(0.862) q[0], Z q[1], Rz(0.720) q[0], H q[0], CNOT q[0]→q[1]) and now solely decide visibility flags per tile. q2/q3 form a fresh Bell pair (H q[2], CNOT q[2]→q[3]) deciding the shared snake/ladder type. parseResult must take 4 measurement bits and return { playerOutcome, partnerOutcome } where: m0=0 → player tile fires (type from m2), m0=1 → player tile cancelled (interference); m1=0 → partner preset to type from m2 (collapsed snake or ladder), m1=1 → partner cancelled (interference). Bit-ordering convention: result[0][i] = c[i] = q[i] measurement. Update describe()/log lines so Quokka log shows the 4-qubit circuit and explains the new mapping. Keep basicBellStrategy unchanged in semantics but its parseResult must accept the wider signature (extra bits ignored).",
+      "priority": 0,
+      "dependencies": [],
+      "estimated_complexity": "medium",
+      "acceptance_criteria": [
+        "Quokka receives a 4-qubit QASM with q0/q1 biased pair and q2/q3 H+CNOT pair",
+        "parseResult returns playerOutcome based on m0+m2 and partnerOutcome based on m1+m2",
+        "When m0=0 the player slides per snake/ladder (type=m2)",
+        "When m0=1 player tile is interference (no movement) but partner can still be set per m1",
+        "When m1=0 the partner qubit is immediately collapsed to 'snake' or 'ladder' (matching m2) so the next player to land triggers the existing collapsed-tile branch in use-play.ts",
+        "When m1=1 partner is collapsed to 'interference'",
+        "EntanglementStrategy.parseResult signature accepts 4 measurement bits (m2/m3 optional for basicBell)",
+        "Quokka log shows: full 4-qubit QASM, circuit diagram, mapping description (q0=player visible, q1=partner visible, q2=q3=type)",
+        "bun run typecheck passes",
+        "bun run test passes",
+        "Existing use-game.test.tsx still passes (non-entangled qubit flow unaffected)"
+      ],
+      "artifacts_expected": [
+        "src/lib/entanglement-strategy.ts",
+        "src/hooks/use-collapse.ts",
+        "src/constants/board.ts (only if entangledParams shape changes)"
+      ],
+      "scope": [
+        "src/lib/entanglement-strategy.ts",
+        "src/hooks/use-collapse.ts",
+        "src/types/game.ts (read-only — no changes expected)",
+        "src/constants/board.ts (entangledParams)"
+      ]
+    },
+    {
+      "id": "task-2",
+      "agent": "debug",
+      "title": "Fix first-row snake placing player at higher cell (and symmetric top-row ladder bug)",
+      "description": "src/lib/game-helpers.ts:computeDisplacement — when targetCell is on row 0 and outcome is 'snake', dy gets clamped to 0 by clamp(coord.row + dy, 0, 9). Then a positive dx still moves the player to a higher cell number on row 0 (e.g., 6 → 8). Same symmetry bug likely exists for ladder on row 9. Fix: after computing newCell, if outcome === 'snake' && newCell >= targetCell, fall back to max(1, targetCell - 1). If outcome === 'ladder' && newCell <= targetCell, fall back to min(TOTAL_CELLS, targetCell + 1). Add log entries explaining the clamp ('Snake clamped: would have moved to N which is not lower than M'). Add unit tests covering: row-0 snake from cell 1, 5, 10; row-9 ladder from cell 91, 95, 100; mid-board cases unaffected.",
+      "priority": 1,
+      "dependencies": [],
+      "estimated_complexity": "low",
+      "acceptance_criteria": [
+        "computeDisplacement returns newCell < targetCell whenever outcome === 'snake'",
+        "computeDisplacement returns newCell > targetCell whenever outcome === 'ladder' (when targetCell < TOTAL_CELLS)",
+        "Fallback clamp is logged via addLog so the Quokka log explains the adjustment",
+        "New unit tests in src/lib/__tests__/game-helpers.test.ts (or hooks/__tests__) covering row-0 snake and row-9 ladder edge cases",
+        "bun run typecheck passes",
+        "bun run test passes (existing + new tests)"
+      ],
+      "artifacts_expected": [
+        "src/lib/game-helpers.ts",
+        "src/lib/__tests__/game-helpers.test.ts (new)"
+      ],
+      "scope": [
+        "src/lib/game-helpers.ts",
+        "src/lib/__tests__/"
+      ]
+    }
+  ],
+  "api_contracts": [],
+  "data_models": [
+    {
+      "entity": "EntanglementParsed",
+      "fields": {
+        "playerOutcome": "'snake' | 'ladder' | 'interference'",
+        "partnerOutcome": "'snake' | 'ladder' | 'interference' | null"
+      }
+    },
+    {
+      "entity": "QubitConfig.entangledParams",
+      "fields": {
+        "thetaA": "number (Ry on q[0])",
+        "thetaB": "number (Ry on q[1])",
+        "phase": "number (Rz on q[0])"
+      }
+    }
+  ],
+  "non_functional_requirements": {
+    "security": [],
+    "performance": [
+      "4-qubit measurement adds 2 qubits; Quokka latency unchanged"
+    ],
+    "scalability": []
+  },
+  "testing_strategy": {
+    "unit_tests": "vitest — new tests for computeDisplacement edge cases; existing use-game.test.tsx must remain green",
+    "integration_tests": "manual: roll a die that lands on entangled cell, verify Quokka log shows 4-qubit circuit + correct partner preset behavior",
+    "e2e_tests": "n/a",
+    "performance_tests": "n/a"
+  }
+}
