@@ -1,5 +1,3 @@
-// Dot position layouts for each dice face (1-6)
-// Grid: 3x3 positions → top-left, top-center, top-right, mid-left, center, mid-right, bot-left, bot-center, bot-right
 const DOT_LAYOUTS: Record<number, number[]> = {
   1: [4],
   2: [2, 6],
@@ -9,23 +7,51 @@ const DOT_LAYOUTS: Record<number, number[]> = {
   6: [0, 2, 3, 5, 6, 8],
 }
 
+const FACE_PLACEMENT: Record<number, string> = {
+  1: 'translateZ(var(--dice-half))',
+  2: 'rotateY(90deg) translateZ(var(--dice-half))',
+  3: 'rotateX(90deg) translateZ(var(--dice-half))',
+  4: 'rotateX(-90deg) translateZ(var(--dice-half))',
+  5: 'rotateY(-90deg) translateZ(var(--dice-half))',
+  6: 'rotateY(180deg) translateZ(var(--dice-half))',
+}
+
+const FACE_TO_FRONT: Record<number, string> = {
+  1: 'rotateX(0deg) rotateY(0deg)',
+  2: 'rotateX(0deg) rotateY(-90deg)',
+  3: 'rotateX(-90deg) rotateY(0deg)',
+  4: 'rotateX(90deg) rotateY(0deg)',
+  5: 'rotateX(0deg) rotateY(90deg)',
+  6: 'rotateX(0deg) rotateY(-180deg)',
+}
+
 interface DiceProps {
   value: number
   rolling?: boolean
 }
 
 export function Dice({ value, rolling }: DiceProps) {
-  const dots = DOT_LAYOUTS[value] ?? DOT_LAYOUTS[6]
+  const restTransform = FACE_TO_FRONT[value] ?? FACE_TO_FRONT[1]
 
   return (
-    <div
-      className={`w-16 h-16 lg:w-[4.5rem] lg:h-[4.5rem] rounded-xl grid grid-cols-3 grid-rows-3 p-2 gap-0.5 select-none ${rolling ? 'animate-dice-roll' : ''}`}
-      style={{
-        background: 'linear-gradient(145deg, #e8d5b0, #d4c0a0)',
-        border: '1px solid var(--color-board-border)',
-        boxShadow: '0 2px 6px rgba(58, 50, 38, 0.2)',
-      }}
-    >
+    <div className="dice-3d w-16 h-16 lg:w-[4.5rem] lg:h-[4.5rem] select-none">
+      <div
+        className="dice-cube"
+        data-rolling={rolling ? 'true' : 'false'}
+        style={{ transform: restTransform }}
+      >
+        {[1, 2, 3, 4, 5, 6].map((face) => (
+          <DiceFace key={face} face={face} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DiceFace({ face }: { face: number }) {
+  const dots = DOT_LAYOUTS[face]
+  return (
+    <div className="dice-face" style={{ transform: FACE_PLACEMENT[face] }}>
       {Array.from({ length: 9 }, (_, i) => (
         <div key={i} className="flex items-center justify-center">
           {dots.includes(i) && (
