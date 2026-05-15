@@ -84,7 +84,7 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
           )}
           <button
             className="mt-1 py-2 px-4 text-xs font-bold text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
-            onClick={onRandomPlace}
+            onClick={() => onRandomPlace()}
           >
             Random Place All
           </button>
