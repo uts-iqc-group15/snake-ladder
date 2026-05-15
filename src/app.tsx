@@ -5,6 +5,7 @@ import { Controls } from '@/components/controls'
 import { Credits } from '@/components/credits'
 import { Poc } from '@/components/poc'
 import { QuantumLog } from '@/components/quantum-log'
+import { useDebugMode } from '@/hooks/use-debug-mode'
 import { useGame } from '@/hooks/use-game'
 
 type Page = 'poc' | 'complete' | 'credits'
@@ -19,6 +20,7 @@ function App() {
   const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
   const [page, setPage] = useState<Page>(getPageFromHash)
   const confettiFired = useRef(false)
+  const debug = useDebugMode()
 
   const navigate = (p: Page) => {
     window.location.hash = p === 'complete' ? '' : p
@@ -30,6 +32,15 @@ function App() {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  useEffect(() => {
+    if (!debug) return
+    if (state.phase === 'setup' && state.setupRemaining[state.currentPlayer].length > 0) {
+      randomPlaceAll(50)
+    } else if (state.phase === 'passing') {
+      confirmPass()
+    }
+  }, [debug, state.phase, state.currentPlayer, state.setupRemaining, randomPlaceAll, confirmPass])
 
   useEffect(() => {
     if (state.gameOver && !confettiFired.current) {

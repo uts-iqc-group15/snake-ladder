@@ -11,7 +11,7 @@ import type { GamePhase, GameState, PlacedQubit } from '@/types/game'
 export interface SetupActions {
   selectQubit: (configIndex: number) => void
   placeQubit: (cell: number) => void
-  randomPlaceAll: () => void
+  randomPlaceAll: (maxCell?: number) => void
   confirmPass: () => void
 }
 
@@ -88,7 +88,7 @@ export function useSetup(
     })
   })
 
-  const randomPlaceAll = useMemoizedFn(() => {
+  const randomPlaceAll = useMemoizedFn((maxCell?: number) => {
     setState((prev) => {
       if (prev.phase !== 'setup') return prev
 
@@ -96,6 +96,7 @@ export function useSetup(
       const remaining = prev.setupRemaining[player]
       if (remaining.length === 0) return prev
 
+      const upper = Math.min(maxCell ?? PLACEMENT_MAX, PLACEMENT_MAX)
       const occupiedCells = prev.qubits.map((q) => q.cell)
       const newQubits = [...prev.qubits]
       const newRemaining: [number[], number[]] = [
@@ -108,7 +109,7 @@ export function useSetup(
         do {
           cell =
             PLACEMENT_MIN +
-            Math.floor(Math.random() * (PLACEMENT_MAX - PLACEMENT_MIN + 1))
+            Math.floor(Math.random() * (upper - PLACEMENT_MIN + 1))
         } while (occupiedCells.includes(cell))
 
         occupiedCells.push(cell)
