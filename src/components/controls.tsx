@@ -123,22 +123,17 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
 
           {/* Debug: fixed-step picker */}
           {debug && (
-            <div className="flex flex-col gap-1.5">
-              <div className="text-[0.65rem] text-text-secondary uppercase tracking-wider text-center">
-                Debug: Force Move
-              </div>
-              <div className="grid grid-cols-6 gap-1">
-                {[1, 2, 3, 4, 5, 6].map((n) => (
-                  <button
-                    key={n}
-                    className="py-1.5 text-sm font-mono font-bold text-text rounded border border-[var(--color-border)] bg-transparent cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
-                    onClick={() => onRoll(n)}
-                    disabled={isRolling || isCollapsing || gameOver}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-6 gap-1">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <button
+                  key={n}
+                  className="py-1.5 text-sm font-mono font-bold text-text rounded border border-[var(--color-border)] bg-transparent cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => onRoll(n)}
+                  disabled={isRolling || isCollapsing || gameOver}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
           )}
         </>
