@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { LuSettings } from 'react-icons/lu'
+import { LuSettings, LuUsers } from 'react-icons/lu'
 import confetti from 'canvas-confetti'
 import { Board } from '@/components/board'
 import { Controls } from '@/components/controls'
@@ -196,9 +196,11 @@ function App() {
           Settings
         </button>
         <button
-          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors flex items-center gap-1"
           onClick={() => navigate('credits')}
+          aria-label="View credits"
         >
+          <LuUsers className="text-sm" />
           Credits
         </button>
       </footer>
