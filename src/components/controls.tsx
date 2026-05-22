@@ -85,8 +85,9 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
           <button
             className="mt-1 py-2 px-4 text-xs font-bold text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
             onClick={() => onRandomPlace()}
+            title="Shortcut: R"
           >
-            Random Place All
+            Random Place All <span className="opacity-60 font-mono">(R)</span>
           </button>
         </div>
       )}
@@ -117,8 +118,13 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
             className="py-3 px-8 text-[0.875rem] font-bold text-text-inverse rounded-[var(--radius-button)] bg-player-1 cursor-pointer transition-all duration-150 hover:brightness-90 hover:translate-y-[-1px] hover:shadow-[var(--shadow-button)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
             onClick={() => onRoll()}
             disabled={isRolling || isCollapsing || gameOver}
+            title="Shortcut: Space"
           >
-            {isCollapsing ? 'Measuring...' : 'Roll Dice'}
+            {isCollapsing ? 'Measuring...' : (
+              <>
+                Roll Dice <span className="opacity-70 font-mono">(Space)</span>
+              </>
+            )}
           </button>
 
           {/* Debug: fixed-step picker */}
@@ -143,8 +149,9 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
       <button
         className="py-2 px-6 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
         onClick={onReset}
+        title="Shortcut: N"
       >
-        New Game
+        New Game <span className="opacity-60 font-mono">(N)</span>
       </button>
 
       {/* Message */}

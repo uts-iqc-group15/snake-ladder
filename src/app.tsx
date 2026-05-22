@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useKeyPress } from 'ahooks'
 import { LuSettings, LuUsers } from 'react-icons/lu'
 import confetti from 'canvas-confetti'
 import { Board } from '@/components/board'
@@ -23,12 +24,34 @@ function App() {
   const [page, setPage] = useState<Page>(getPageFromHash)
   const [winOverlayDismissed, setWinOverlayDismissed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [confirmNewGameOpen, setConfirmNewGameOpen] = useState(false)
   const confettiFired = useRef(false)
   const debug = useDebugMode()
 
   const handleReset = () => {
     setWinOverlayDismissed(false)
     reset()
+  }
+
+  const confirmNewGame = () => {
+    setConfirmNewGameOpen(false)
+    handleReset()
+  }
+
+  const isOverlayOpen =
+    settingsOpen ||
+    confirmNewGameOpen ||
+    state.phase === 'passing' ||
+    (state.gameOver && !winOverlayDismissed)
+
+  const isTypingTarget = () => {
+    const el = document.activeElement as HTMLElement | null
+    if (!el) return false
+    return (
+      el.tagName === 'INPUT' ||
+      el.tagName === 'TEXTAREA' ||
+      el.isContentEditable
+    )
   }
 
   const navigate = (p: Page) => {
@@ -41,6 +64,64 @@ function App() {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  useKeyPress(
+    'space',
+    (e) => {
+      if (page !== 'complete' || isOverlayOpen || isTypingTarget()) return
+      if (
+        state.phase !== 'play' ||
+        state.isRolling ||
+        state.isCollapsing ||
+        state.gameOver
+      ) {
+        return
+      }
+      e.preventDefault()
+      handleRoll()
+    },
+    { exactMatch: true },
+  )
+
+  useKeyPress(
+    'r',
+    (e) => {
+      if (page !== 'complete' || isOverlayOpen || isTypingTarget()) return
+      if (state.phase !== 'setup') return
+      if (state.setupRemaining[state.currentPlayer].length === 0) return
+      e.preventDefault()
+      randomPlaceAll()
+    },
+    { exactMatch: true },
+  )
+
+  useKeyPress(
+    'n',
+    (e) => {
+      if (page !== 'complete' || settingsOpen || confirmNewGameOpen || isTypingTarget()) return
+      e.preventDefault()
+      setConfirmNewGameOpen(true)
+    },
+    { exactMatch: true },
+  )
+
+  useKeyPress(
+    'enter',
+    (e) => {
+      if (!confirmNewGameOpen) return
+      e.preventDefault()
+      confirmNewGame()
+    },
+  )
+
+  useKeyPress(
+    'esc',
+    (e) => {
+      if (!confirmNewGameOpen) return
+      e.preventDefault()
+      setConfirmNewGameOpen(false)
+    },
+  )
 
   useEffect(() => {
     if (!debug) return
@@ -97,7 +178,7 @@ function App() {
           <Controls
             state={state}
             onRoll={handleRoll}
-            onReset={handleReset}
+            onReset={() => setConfirmNewGameOpen(true)}
             onSelectQubit={selectQubit}
             onRandomPlace={randomPlaceAll}
           />
@@ -208,6 +289,40 @@ function App() {
 
       {/* Settings Modal */}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {/* New Game Confirm Modal */}
+      {confirmNewGameOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(0,0,0,0.75)] cursor-pointer"
+          onClick={() => setConfirmNewGameOpen(false)}
+        >
+          <div
+            className="flex flex-col gap-5 p-8 card-panel max-w-md w-[min(90vw,24rem)] cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-xl font-display font-bold text-text">
+              Start a new game?
+            </div>
+            <div className="text-text-secondary text-sm">
+              Current game progress will be lost.
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                className="py-2 px-5 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)]"
+                onClick={() => setConfirmNewGameOpen(false)}
+              >
+                Cancel <span className="opacity-60 font-mono">(Esc)</span>
+              </button>
+              <button
+                className="py-2 px-5 text-sm font-bold text-text-inverse rounded-[var(--radius-button)] bg-player-1 cursor-pointer transition-all hover:brightness-90"
+                onClick={confirmNewGame}
+              >
+                New Game <span className="opacity-70 font-mono">(Enter)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quokka Log Panel */}
       <QuantumLog logs={state.logs} />
