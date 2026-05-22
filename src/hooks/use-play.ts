@@ -13,6 +13,7 @@ import type {
 } from '@/types/game'
 
 const DICE_SETTLE_PAUSE_MS = 250
+const BOUNCE_PAUSE_MS = 320
 
 interface UsePlayDeps {
   setState: Dispatch<SetStateAction<GameState>>
@@ -64,10 +65,18 @@ export function usePlay({
 
     if (rawTarget > TOTAL_CELLS) {
       const needed = TOTAL_CELLS - currentCell
-      const overshootMsg = `Rolled ${die}: need exactly ${needed} to reach ${TOTAL_CELLS}. Stay at cell ${currentCell}.`
-      // Settle dice first so the user sees the value before turn passes.
-      setState((prev) => ({ ...prev, dice: die }))
+      const overshootMsg = `Rolled ${die}: need exactly ${needed} to reach ${TOTAL_CELLS}. Bouncing back.`
+      // Settle dice first so the user sees the value.
+      setState((prev) => ({
+        ...prev,
+        dice: die,
+        message: `Rolled ${die}: need exactly ${needed} to win — bouncing off ${TOTAL_CELLS}!`,
+      }))
       await sleep(DICE_SETTLE_PAUSE_MS)
+      // Animate forward to the end, pause as if hitting a wall, then bounce back.
+      await hopAlongBoard(player, currentCell, TOTAL_CELLS)
+      await sleep(BOUNCE_PAUSE_MS)
+      await hopAlongBoard(player, TOTAL_CELLS, currentCell)
       setState((prev) => ({
         ...prev,
         isRolling: false,
