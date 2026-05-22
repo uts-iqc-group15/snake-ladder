@@ -166,7 +166,13 @@ export function Board({
                 }}
               >
                 {/* Cell number / label */}
-                <span className="absolute top-0.5 left-1 text-[0.6rem] font-bold text-text-cell">
+                <span
+                  className={`absolute top-0.5 left-1 text-[0.6rem] font-bold ${
+                    num === 1 || num === TOTAL_CELLS
+                      ? 'text-text-inverse drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]'
+                      : 'text-text-cell'
+                  }`}
+                >
                   {num === 1 ? 'Start' : num === TOTAL_CELLS ? 'End' : num}
                 </span>
 
