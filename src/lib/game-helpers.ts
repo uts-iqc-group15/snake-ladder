@@ -10,10 +10,6 @@ import {
 } from '@/constants/board'
 import type { GameState, LogEntry, PlacedQubit } from '@/types/game'
 
-export const HOP_MS = 140
-export const LADDER_STEP_MS = 70
-export const SNAKE_STEP_MS = 60
-
 export const INITIAL_SETUP: [number[], number[]] = [
   [0, 1, 2, 3, 4],
   [0, 1, 2, 3, 4],

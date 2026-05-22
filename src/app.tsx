@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { LuSettings } from 'react-icons/lu'
 import confetti from 'canvas-confetti'
 import { Board } from '@/components/board'
 import { Controls } from '@/components/controls'
 import { Credits } from '@/components/credits'
 import { Poc } from '@/components/poc'
 import { QuantumLog } from '@/components/quantum-log'
+import { SettingsModal } from '@/components/settings-modal'
 import { useDebugMode } from '@/hooks/use-debug-mode'
 import { useGame } from '@/hooks/use-game'
 
@@ -19,8 +21,15 @@ function getPageFromHash(): Page {
 function App() {
   const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
   const [page, setPage] = useState<Page>(getPageFromHash)
+  const [winOverlayDismissed, setWinOverlayDismissed] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const confettiFired = useRef(false)
   const debug = useDebugMode()
+
+  const handleReset = () => {
+    setWinOverlayDismissed(false)
+    reset()
+  }
 
   const navigate = (p: Page) => {
     window.location.hash = p === 'complete' ? '' : p
@@ -53,7 +62,9 @@ function App() {
       }
       frame()
     }
-    if (!state.gameOver) confettiFired.current = false
+    if (!state.gameOver) {
+      confettiFired.current = false
+    }
   }, [state.gameOver])
 
   if (page === 'credits') {
@@ -85,7 +96,7 @@ function App() {
           <Controls
             state={state}
             onRoll={handleRoll}
-            onReset={reset}
+            onReset={handleReset}
             onSelectQubit={selectQubit}
             onRandomPlace={randomPlaceAll}
           />
@@ -123,8 +134,67 @@ function App() {
         </div>
       )}
 
+      {/* Win overlay */}
+      {state.gameOver && !winOverlayDismissed && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.85)] cursor-pointer"
+          onClick={() => setWinOverlayDismissed(true)}
+        >
+          <div
+            className="flex flex-col items-center gap-6 p-10 card-panel max-w-md text-center cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-sm font-bold uppercase tracking-[0.2em] text-text-secondary">
+              Quantum Victory
+            </div>
+            <div
+              className="text-4xl font-display font-bold"
+              style={{
+                color:
+                  state.currentPlayer === 0
+                    ? 'var(--color-player-1)'
+                    : 'var(--color-player-2)',
+              }}
+            >
+              Player {state.currentPlayer + 1} Wins!
+            </div>
+            <div className="text-text-secondary text-sm">
+              Click anywhere to view the final board.
+            </div>
+            <div className="flex gap-3">
+              <button
+                className="py-3 px-6 text-sm font-bold text-text-inverse rounded-[var(--radius-button)] cursor-pointer transition-all hover:brightness-90"
+                style={{
+                  background:
+                    state.currentPlayer === 0
+                      ? 'var(--color-player-1)'
+                      : 'var(--color-player-2)',
+                }}
+                onClick={handleReset}
+              >
+                New Game
+              </button>
+              <button
+                className="py-3 px-6 text-sm text-text-secondary rounded-[var(--radius-button)] bg-transparent border-[1.5px] border-[var(--color-border)] cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)]"
+                onClick={() => setWinOverlayDismissed(true)}
+              >
+                View Board
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
-      <footer className="w-full py-3 text-center flex justify-center gap-4">
+      <footer className="w-full py-3 text-center flex justify-center items-center gap-4">
+        <button
+          className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors flex items-center gap-1"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Open settings"
+        >
+          <LuSettings className="text-sm" />
+          Settings
+        </button>
         <button
           className="text-text-secondary text-xs font-body hover:text-text cursor-pointer transition-colors"
           onClick={() => navigate('credits')}
@@ -132,6 +202,9 @@ function App() {
           Credits
         </button>
       </footer>
+
+      {/* Settings Modal */}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Quokka Log Panel */}
       <QuantumLog logs={state.logs} />

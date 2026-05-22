@@ -33,6 +33,14 @@ function cellToPercent(cell: number): { x: number; y: number } {
   }
 }
 
+function qubitIconColor(ladderProb: number, entangled: boolean): string {
+  if (entangled) return 'var(--color-neon-yellow)'
+  if (ladderProb >= 0.7) return 'var(--color-ladder)'
+  if (ladderProb >= 0.5) return 'rgba(45,106,79,0.85)'
+  if (ladderProb >= 0.3) return 'rgba(192,69,48,0.85)'
+  return 'var(--color-snake)'
+}
+
 export function Board({
   positions,
   qubits,
@@ -148,18 +156,29 @@ export function Board({
                 </span>
 
                 {/* Qubit indicators */}
-                {showQubit && qubitHere.collapsed === null && (
-                  <span
-                    className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] text-text animate-quantum-shimmer"
-                    title={
-                      isOwnQubit
-                        ? `Qubit [${QUBIT_CONFIGS[qubitHere.configIndex].label}]`
-                        : 'Quantum item'
-                    }
-                  >
-                    <QubitIcon entangled={QUBIT_CONFIGS[qubitHere.configIndex].entangled} />
-                  </span>
-                )}
+                {showQubit && qubitHere.collapsed === null && (() => {
+                  const cfg = QUBIT_CONFIGS[qubitHere.configIndex]
+                  const ladderPct = Math.round(cfg.ladderProb * 100)
+                  const snakePct = Math.round(cfg.snakeProb * 100)
+                  const entangledNote = cfg.entangled ? ' · Entangled' : ''
+                  const hideDetails = isSetup && !isOwnQubit
+                  const tooltip = hideDetails
+                    ? 'Hidden quantum item'
+                    : `Qubit [${cfg.label}] — P(Ladder)=${ladderPct}%, P(Snake)=${snakePct}%${entangledNote}`
+                  return (
+                    <span
+                      className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] animate-quantum-shimmer"
+                      title={tooltip}
+                      style={{
+                        color: hideDetails
+                          ? 'var(--color-text)'
+                          : qubitIconColor(cfg.ladderProb, cfg.entangled),
+                      }}
+                    >
+                      <QubitIcon entangled={cfg.entangled} />
+                    </span>
+                  )
+                })()}
                 {qubitHere?.collapsed === 'interference' && (
                   <span
                     className="absolute bottom-0.5 right-0.5 text-[1.1rem] lg:text-[1.25rem] text-text opacity-40"

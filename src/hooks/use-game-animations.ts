@@ -1,7 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useMemoizedFn } from 'ahooks'
 import { cellToCoord, coordToCell } from '@/constants/board'
-import { HOP_MS, LADDER_STEP_MS, SNAKE_STEP_MS, sleep } from '@/lib/game-helpers'
+import { sleep } from '@/lib/game-helpers'
+import { useSettings } from '@/lib/settings'
 import type { GameState } from '@/types/game'
 
 export interface GameAnimations {
@@ -18,6 +19,8 @@ export interface GameAnimations {
 export function useGameAnimations(
   setState: Dispatch<SetStateAction<GameState>>,
 ): GameAnimations {
+  const { timings } = useSettings()
+
   const setPosition = useMemoizedFn((player: 0 | 1, cell: number) => {
     setState((prev) => {
       const positions: [number, number] = [...prev.positions]
@@ -36,7 +39,7 @@ export function useGameAnimations(
         cell += dir
       ) {
         setPosition(player, cell)
-        await sleep(HOP_MS)
+        await sleep(timings.hopMs)
       }
     },
   )
@@ -52,7 +55,7 @@ export function useGameAnimations(
       }
       // Densify so the token visits more intermediate cells — feels like a glide.
       const steps = gridSpan * 2
-      const stepMs = isLadder ? LADDER_STEP_MS : SNAKE_STEP_MS
+      const stepMs = isLadder ? timings.ladderStepMs : timings.snakeStepMs
 
       setState((prev) => ({ ...prev, slidingPlayer: player }))
       try {

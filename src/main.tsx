@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NuqsAdapter } from 'nuqs/adapters/react'
 import './index.css'
 import App from './app.tsx'
+import { SettingsProvider } from '@/components/settings-provider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,7 +16,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <NuqsAdapter>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
       </QueryClientProvider>
     </NuqsAdapter>
   </StrictMode>,

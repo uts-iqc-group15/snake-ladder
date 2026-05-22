@@ -3,6 +3,7 @@ import { useMemoizedFn } from 'ahooks'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { TOTAL_CELLS } from '@/constants/board'
 import { computeDisplacement, rollDie, sleep } from '@/lib/game-helpers'
+import { useSettings } from '@/lib/settings'
 import type {
   CollapseParams,
   CollapseResult,
@@ -10,6 +11,8 @@ import type {
   GameState,
   LogEntry,
 } from '@/types/game'
+
+const DICE_SETTLE_PAUSE_MS = 250
 
 interface UsePlayDeps {
   setState: Dispatch<SetStateAction<GameState>>
@@ -37,6 +40,8 @@ export function usePlay({
   slideToCell,
   collapseMutation,
 }: UsePlayDeps): PlayActions {
+  const { timings } = useSettings()
+
   const handleRoll = useMemoizedFn(async (forced?: number) => {
     const snap = stateRef.current
     if (
@@ -48,18 +53,37 @@ export function usePlay({
       return
     }
 
-    setState((prev) => ({ ...prev, isRolling: true, message: '' }))
+    setState((prev) => ({ ...prev, isRolling: true, dice: null, message: '' }))
 
     const die = forced && forced >= 1 && forced <= 6 ? forced : rollDie()
-    await sleep(400)
+    await sleep(timings.diceDurationMs)
 
     const player = snap.currentPlayer
     const currentCell = snap.positions[player]
     const rawTarget = currentCell + die
-    const targetCell = Math.min(rawTarget, TOTAL_CELLS)
+
+    if (rawTarget > TOTAL_CELLS) {
+      const needed = TOTAL_CELLS - currentCell
+      const overshootMsg = `Rolled ${die}: need exactly ${needed} to reach ${TOTAL_CELLS}. Stay at cell ${currentCell}.`
+      // Settle dice first so the user sees the value before turn passes.
+      setState((prev) => ({ ...prev, dice: die }))
+      await sleep(DICE_SETTLE_PAUSE_MS)
+      setState((prev) => ({
+        ...prev,
+        isRolling: false,
+        message: overshootMsg,
+        currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
+      }))
+      addLog('info', `Player ${player + 1} ${overshootMsg}`)
+      return
+    }
+
+    const targetCell = rawTarget
     const msg = `Rolled ${die}: cell ${currentCell} → ${targetCell}`
 
+    // Dice lands on its face; pause so the player can read it before the token moves.
     setState((prev) => ({ ...prev, dice: die, message: msg }))
+    await sleep(DICE_SETTLE_PAUSE_MS)
 
     await hopAlongBoard(player, currentCell, targetCell)
 

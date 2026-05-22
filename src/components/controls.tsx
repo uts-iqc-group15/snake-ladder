@@ -106,7 +106,7 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
 
           {/* Dice */}
           <div className="flex flex-col items-center gap-3">
-            <Dice value={dice ?? 6} rolling={isRolling} />
+            <Dice value={dice ?? 6} rolling={isRolling && dice === null} />
             <div className="text-xl font-bold font-mono text-text-secondary h-7">
               {dice ? `${dice}` : '\u00A0'}
             </div>

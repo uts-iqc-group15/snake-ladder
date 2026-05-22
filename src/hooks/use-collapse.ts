@@ -61,6 +61,16 @@ export function useCollapse({
             ? computeDisplacement(partnerSettled, partnerCell, addLog)
             : undefined
 
+        let interferenceMessage: string
+        if (partnerSettled && partnerCell !== undefined) {
+          const partnerLabel = partnerSettled === 'ladder' ? 'Ladder' : 'Snake'
+          interferenceMessage = `Your qubit cancelled (no move). Partner became a ${partnerLabel} at cell ${partnerCell}.`
+        } else if (partnerOutcome === 'interference') {
+          interferenceMessage = 'Interference — both entangled qubits cancelled out.'
+        } else {
+          interferenceMessage = 'Your qubit cancelled (no move). Partner is still in superposition.'
+        }
+
         setState((prev) => ({
           ...prev,
           qubits: prev.qubits.map((q) => {
@@ -77,7 +87,7 @@ export function useCollapse({
           }),
           isCollapsing: false,
           currentPlayer: (player === 0 ? 1 : 0) as 0 | 1,
-          message: 'No effect — turn passes.',
+          message: interferenceMessage,
         }))
         return
       }
