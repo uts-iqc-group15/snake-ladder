@@ -108,9 +108,15 @@ function App() {
   useKeyPress(
     'enter',
     (e) => {
-      if (!confirmNewGameOpen) return
-      e.preventDefault()
-      confirmNewGame()
+      if (confirmNewGameOpen) {
+        e.preventDefault()
+        confirmNewGame()
+        return
+      }
+      if (state.phase === 'passing' && page === 'complete' && !settingsOpen) {
+        e.preventDefault()
+        confirmPass()
+      }
     },
   )
 
@@ -210,7 +216,7 @@ function App() {
               }}
               onClick={confirmPass}
             >
-              Continue
+              Continue <span className="opacity-70 font-mono">(Enter)</span>
             </button>
           </div>
         </div>
