@@ -44,8 +44,11 @@ export const QUBIT_CONFIGS: QubitConfig[] = [
   },
 ]
 
-export function isValidPlacement(cell: number, occupiedCells: number[]): boolean {
-  return cell >= PLACEMENT_MIN && cell <= PLACEMENT_MAX && !occupiedCells.includes(cell)
+// A cell is valid for the *current player* if it's in range and the player
+// has no qubit there yet. Opponent qubits don't block placement — colliding
+// with one triggers interference (handled in useSetup.placeQubit).
+export function isValidPlacement(cell: number, ownCells: number[]): boolean {
+  return cell >= PLACEMENT_MIN && cell <= PLACEMENT_MAX && !ownCells.includes(cell)
 }
 
 // Roll → { magnitude, direction: -1 | 1 }

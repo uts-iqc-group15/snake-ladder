@@ -60,7 +60,16 @@ export function Board({
   }
 
   const isSetup = phase === 'setup'
-  const occupiedCells = qubits.map((q) => q.cell)
+  // During setup each player only sees their own qubits — opponent placements
+  // stay hidden so prep is a blank board for the player whose turn it is.
+  const visibleQubits = isSetup
+    ? qubits.filter((q) => q.owner === currentPlayer)
+    : qubits
+  // Only the current player's own cells block placement; hitting an opponent
+  // cell (hidden) is allowed and triggers interference (handled in useSetup).
+  const ownOccupiedCells = qubits
+    .filter((q) => q.owner === currentPlayer)
+    .map((q) => q.cell)
 
   const p1Coord = cellToCoord(positions[0])
   const p2Coord = cellToCoord(positions[1])
@@ -82,7 +91,7 @@ export function Board({
             const boardRow = BOARD_SIZE - 1 - rowIdx
             const boardCol = colIdx
 
-            const qubitHere = qubits.find((q) => q.cell === num)
+            const qubitHere = visibleQubits.find((q) => q.cell === num)
             const isOwnQubit = qubitHere && qubitHere.owner === currentPlayer
             const showQubit = !!qubitHere
 
@@ -91,7 +100,7 @@ export function Board({
               selectedConfigIndex !== null &&
               num >= PLACEMENT_MIN &&
               num <= PLACEMENT_MAX &&
-              !occupiedCells.includes(num)
+              !ownOccupiedCells.includes(num)
 
             const p1Here = boardCol === p1Coord.col && boardRow === p1Coord.row
             const p2Here = boardCol === p2Coord.col && boardRow === p2Coord.row
@@ -182,7 +191,7 @@ export function Board({
                 {qubitHere?.collapsed === 'interference' && (
                   <span
                     className="absolute bottom-0.5 right-0.5 text-[1.1rem] lg:text-[1.25rem] text-text opacity-40"
-                    title="Quantum interference — both entangled qubits cancelled out"
+                    title="Quantum interference — this qubit cancelled out"
                   >
                     <LuWaves aria-label="Interference" />
                   </span>
