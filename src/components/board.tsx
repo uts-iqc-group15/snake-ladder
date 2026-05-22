@@ -125,6 +125,8 @@ export function Board({
               tintClass = qubitEntangled
                 ? 'bg-[rgba(58,122,133,0.14)]'
                 : 'bg-[rgba(45,106,79,0.12)]'
+            } else if (qubitHere?.collapsed === 'interference') {
+              tintClass = 'bg-[rgba(122,91,156,0.12)]'
             } else if (isSetup && isValidTarget) {
               tintClass = 'bg-[rgba(255,255,255,0.04)]'
             }
@@ -190,8 +192,9 @@ export function Board({
                 })()}
                 {qubitHere?.collapsed === 'interference' && (
                   <span
-                    className="absolute bottom-0.5 right-0.5 text-[1.1rem] lg:text-[1.25rem] text-text opacity-40"
+                    className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] animate-quantum-shimmer"
                     title="Quantum interference — this qubit cancelled out"
+                    style={{ color: 'var(--color-interference)' }}
                   >
                     <LuWaves aria-label="Interference" />
                   </span>
