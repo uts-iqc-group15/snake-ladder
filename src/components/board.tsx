@@ -3,6 +3,8 @@ import { BOARD_SIZE, TOTAL_CELLS, QUBIT_CONFIGS, PLACEMENT_MIN, PLACEMENT_MAX } 
 import { cellToCoord } from '@/constants/board'
 import type { PlacedQubit, GamePhase } from '@/hooks/use-game'
 import { QubitIcon } from '@/components/qubit-icon'
+import { Tooltip } from '@/components/tooltip'
+import { QubitTooltipBody } from '@/components/qubit-tooltip'
 
 interface BoardProps {
   positions: [number, number]
@@ -171,35 +173,36 @@ export function Board({
                 {/* Qubit indicators */}
                 {showQubit && qubitHere.collapsed === null && (() => {
                   const cfg = QUBIT_CONFIGS[qubitHere.configIndex]
-                  const ladderPct = Math.round(cfg.ladderProb * 100)
-                  const snakePct = Math.round(cfg.snakeProb * 100)
-                  const entangledNote = cfg.entangled ? ' · Entangled' : ''
                   const hideDetails = isSetup && !isOwnQubit
-                  const tooltip = hideDetails
-                    ? 'Hidden quantum item'
-                    : `Qubit [${cfg.label}] — P(Ladder)=${ladderPct}%, P(Snake)=${snakePct}%${entangledNote}`
+                  const tooltipContent = hideDetails ? (
+                    <span className="text-text-secondary">Hidden quantum item</span>
+                  ) : (
+                    <QubitTooltipBody config={cfg} />
+                  )
                   return (
-                    <span
-                      className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] animate-quantum-shimmer"
-                      title={tooltip}
-                      style={{
-                        color: hideDetails
-                          ? 'var(--color-text)'
-                          : qubitIconColor(cfg.ladderProb, cfg.entangled),
-                      }}
-                    >
-                      <QubitIcon entangled={cfg.entangled} />
-                    </span>
+                    <Tooltip content={tooltipContent}>
+                      <span
+                        className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] animate-quantum-shimmer cursor-help"
+                        style={{
+                          color: hideDetails
+                            ? 'var(--color-text)'
+                            : qubitIconColor(cfg.ladderProb, cfg.entangled),
+                        }}
+                      >
+                        <QubitIcon entangled={cfg.entangled} />
+                      </span>
+                    </Tooltip>
                   )
                 })()}
                 {qubitHere?.collapsed === 'interference' && (
-                  <span
-                    className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] animate-quantum-shimmer"
-                    title="Quantum interference — this qubit cancelled out"
-                    style={{ color: 'var(--color-interference)' }}
-                  >
-                    <LuWaves aria-label="Interference" />
-                  </span>
+                  <Tooltip content="Quantum interference — this qubit cancelled out">
+                    <span
+                      className="absolute bottom-0.5 right-0.5 text-[1.25rem] lg:text-[1.4rem] animate-quantum-shimmer cursor-help"
+                      style={{ color: 'var(--color-interference)' }}
+                    >
+                      <LuWaves aria-label="Interference" />
+                    </span>
+                  </Tooltip>
                 )}
 
                 {/* Player tokens */}

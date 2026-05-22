@@ -3,6 +3,8 @@ import { useDebugMode } from '@/hooks/use-debug-mode'
 import { QUBIT_CONFIGS } from '@/constants/board'
 import { Dice } from '@/components/dice'
 import { QubitIcon } from '@/components/qubit-icon'
+import { Tooltip } from '@/components/tooltip'
+import { QubitTooltipBody } from '@/components/qubit-tooltip'
 
 interface ControlsProps {
   state: GameState
@@ -58,22 +60,23 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
               const config = QUBIT_CONFIGS[configIdx]
               const isSelected = selectedConfigIndex === configIdx
               return (
-                <button
-                  key={configIdx}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono cursor-pointer transition-all border ${
-                    isSelected
-                      ? 'border-[var(--color-neon-cyan)] bg-[rgba(0,240,255,0.1)] text-[var(--color-neon-cyan)]'
-                      : 'border-[var(--color-border)] bg-transparent text-text-secondary hover:bg-[var(--color-surface-hover)]'
-                  }`}
-                  onClick={() => onSelectQubit(configIdx)}
-                >
-                  <QubitIcon entangled={config.entangled} className="text-base" />
-                  <span
-                    className={config.entangled ? 'text-[var(--color-neon-yellow)]' : undefined}
+                <Tooltip key={configIdx} content={<QubitTooltipBody config={config} />} side="right">
+                  <button
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono cursor-pointer transition-all border ${
+                      isSelected
+                        ? 'border-[var(--color-neon-cyan)] bg-[rgba(0,240,255,0.1)] text-[var(--color-neon-cyan)]'
+                        : 'border-[var(--color-border)] bg-transparent text-text-secondary hover:bg-[var(--color-surface-hover)]'
+                    }`}
+                    onClick={() => onSelectQubit(configIdx)}
                   >
-                    [{config.label}]
-                  </span>
-                </button>
+                    <QubitIcon entangled={config.entangled} className="text-base" />
+                    <span
+                      className={config.entangled ? 'text-[var(--color-neon-yellow)]' : undefined}
+                    >
+                      [{config.label}]
+                    </span>
+                  </button>
+                </Tooltip>
               )
             })}
           </div>
