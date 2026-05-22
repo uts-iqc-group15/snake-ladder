@@ -27,6 +27,7 @@ export const INITIAL_STATE: GameState = {
   isRolling: false,
   isCollapsing: false,
   slidingPlayer: null,
+  overshootPlayer: null,
   gameOver: false,
   logs: [],
 }

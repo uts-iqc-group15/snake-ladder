@@ -7,7 +7,12 @@ import type { GameState } from '@/types/game'
 
 export interface GameAnimations {
   setPosition: (player: 0 | 1, cell: number) => void
-  hopAlongBoard: (player: 0 | 1, fromCell: number, toCell: number) => Promise<void>
+  hopAlongBoard: (
+    player: 0 | 1,
+    fromCell: number,
+    toCell: number,
+    stepMsOverride?: number,
+  ) => Promise<void>
   slideToCell: (
     player: 0 | 1,
     fromCell: number,
@@ -30,8 +35,14 @@ export function useGameAnimations(
   })
 
   const hopAlongBoard = useMemoizedFn(
-    async (player: 0 | 1, fromCell: number, toCell: number) => {
+    async (
+      player: 0 | 1,
+      fromCell: number,
+      toCell: number,
+      stepMsOverride?: number,
+    ) => {
       if (fromCell === toCell) return
+      const stepMs = stepMsOverride ?? timings.hopMs
       const dir = toCell > fromCell ? 1 : -1
       for (
         let cell = fromCell + dir;
@@ -39,7 +50,7 @@ export function useGameAnimations(
         cell += dir
       ) {
         setPosition(player, cell)
-        await sleep(timings.hopMs)
+        await sleep(stepMs)
       }
     },
   )

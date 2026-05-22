@@ -11,6 +11,7 @@ interface BoardProps {
   phase: GamePhase
   selectedConfigIndex: number | null
   slidingPlayer?: 0 | 1 | null
+  overshootPlayer?: 0 | 1 | null
   onCellClick?: (cell: number) => void
 }
 
@@ -48,6 +49,7 @@ export function Board({
   phase,
   selectedConfigIndex,
   slidingPlayer,
+  overshootPlayer,
   onCellClick,
 }: BoardProps) {
   const cells: number[][] = []
@@ -206,7 +208,11 @@ export function Board({
                     {p1Here && (
                       <span
                         className={`flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-1 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 ${
-                          slidingPlayer === 0 ? '' : 'animate-token-move'
+                          overshootPlayer === 0
+                            ? 'animate-token-overshoot'
+                            : slidingPlayer === 0
+                              ? ''
+                              : 'animate-token-move'
                         }`}
                       >
                         1
@@ -215,7 +221,11 @@ export function Board({
                     {p2Here && (
                       <span
                         className={`flex items-center justify-center w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-player-2 text-[0.7rem] font-bold text-text-inverse border-2 border-white/30 shadow-[var(--shadow-token)] z-10 ${
-                          slidingPlayer === 1 ? '' : 'animate-token-move'
+                          overshootPlayer === 1
+                            ? 'animate-token-overshoot'
+                            : slidingPlayer === 1
+                              ? ''
+                              : 'animate-token-move'
                         }`}
                       >
                         2

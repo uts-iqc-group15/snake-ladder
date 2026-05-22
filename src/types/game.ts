@@ -28,6 +28,7 @@ export interface GameState {
   isRolling: boolean
   isCollapsing: boolean
   slidingPlayer: 0 | 1 | null
+  overshootPlayer: 0 | 1 | null
   gameOver: boolean
   logs: LogEntry[]
 }

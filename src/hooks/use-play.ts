@@ -13,13 +13,19 @@ import type {
 } from '@/types/game'
 
 const DICE_SETTLE_PAUSE_MS = 250
-const BOUNCE_PAUSE_MS = 320
+const OVERSHOOT_ANIM_MS = 520
+const BOUNCE_STEP_SCALE = 0.45
 
 interface UsePlayDeps {
   setState: Dispatch<SetStateAction<GameState>>
   stateRef: MutableRefObject<GameState>
   addLog: (type: LogEntry['type'], message: string) => void
-  hopAlongBoard: (player: 0 | 1, fromCell: number, toCell: number) => Promise<void>
+  hopAlongBoard: (
+    player: 0 | 1,
+    fromCell: number,
+    toCell: number,
+    stepMsOverride?: number,
+  ) => Promise<void>
   slideToCell: (
     player: 0 | 1,
     fromCell: number,
@@ -66,17 +72,21 @@ export function usePlay({
     if (rawTarget > TOTAL_CELLS) {
       const needed = TOTAL_CELLS - currentCell
       const overshootMsg = `Rolled ${die}: need exactly ${needed} to reach ${TOTAL_CELLS}. Bouncing back.`
-      // Settle dice first so the user sees the value.
       setState((prev) => ({
         ...prev,
         dice: die,
         message: `Rolled ${die}: need exactly ${needed} to win — bouncing off ${TOTAL_CELLS}!`,
       }))
       await sleep(DICE_SETTLE_PAUSE_MS)
-      // Animate forward to the end, pause as if hitting a wall, then bounce back.
+      // Hop forward to the end…
       await hopAlongBoard(player, currentCell, TOTAL_CELLS)
-      await sleep(BOUNCE_PAUSE_MS)
-      await hopAlongBoard(player, TOTAL_CELLS, currentCell)
+      // …then visually overshoot past the edge before bouncing back.
+      setState((prev) => ({ ...prev, overshootPlayer: player }))
+      await sleep(OVERSHOOT_ANIM_MS)
+      setState((prev) => ({ ...prev, overshootPlayer: null }))
+      // Bounce back is snappier than the climb up.
+      const bounceStepMs = Math.max(20, Math.round(timings.hopMs * BOUNCE_STEP_SCALE))
+      await hopAlongBoard(player, TOTAL_CELLS, currentCell, bounceStepMs)
       setState((prev) => ({
         ...prev,
         isRolling: false,
