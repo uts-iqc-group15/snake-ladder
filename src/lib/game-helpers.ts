@@ -40,6 +40,18 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+// Quantum tunneling: when a player would land exactly on the opponent's cell,
+// there is a small chance the piece passes through and advances one extra step.
+// The probability is configurable via Settings (debug-only UI); this constant
+// is the default and the fallback used when the caller doesn't pass one in.
+export const TUNNEL_PROBABILITY = 0.1
+
+export function shouldTunnel(probability: number = TUNNEL_PROBABILITY): boolean {
+  if (probability <= 0) return false
+  if (probability >= 1) return true
+  return Math.random() < probability
+}
+
 let qubitIdCounter = 0
 export function nextQubitId(): string {
   return `qb_${++qubitIdCounter}`

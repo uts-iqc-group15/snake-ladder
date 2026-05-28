@@ -1,4 +1,5 @@
 import { useSettings, type MovementSpeed, type DiceSpeed } from '@/lib/settings'
+import { useDebugMode } from '@/hooks/use-debug-mode'
 
 interface SettingsModalProps {
   open: boolean
@@ -19,8 +20,11 @@ const DICE_OPTIONS: { value: DiceSpeed; label: string; hint: string }[] = [
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const { settings, setSettings } = useSettings()
+  const debug = useDebugMode()
 
   if (!open) return null
+
+  const tunnelPercent = Math.round(settings.tunnelProbability * 100)
 
   return (
     <div
@@ -57,6 +61,47 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           options={DICE_OPTIONS}
           onChange={(v) => setSettings({ ...settings, diceSpeed: v })}
         />
+
+        {debug && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-bold text-text">
+                Tunnel probability
+                <span className="ml-2 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-neon-yellow)]">
+                  debug
+                </span>
+              </div>
+              <div className="text-sm font-mono text-[var(--color-neon-cyan)]">
+                {tunnelPercent}%
+              </div>
+            </div>
+            <div className="text-xs text-text-secondary">
+              Chance to phase one square past the opponent when you land on
+              their cell. Only applied while debug mode (<span className="font-mono">?d=1</span>) is on —
+              normal play stays at the 10% default.
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={tunnelPercent}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  tunnelProbability: Number(e.target.value) / 100,
+                })
+              }
+              className="w-full accent-[var(--color-neon-cyan)] cursor-pointer"
+              aria-label="Tunnel probability percent"
+            />
+            <div className="flex justify-between text-[0.65rem] font-mono text-text-secondary">
+              <span>0%</span>
+              <span>50%</span>
+              <span>100%</span>
+            </div>
+          </div>
+        )}
 
         <div className="text-xs text-text-secondary">
           Settings are saved on this device.

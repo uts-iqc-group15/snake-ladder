@@ -4,6 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useGame } from '@/hooks/use-game'
 import { sendToQuokka } from '@/lib/quokka'
+import {
+  DEFAULT_SETTINGS,
+  SettingsContext,
+  resolveTimings,
+  type Settings,
+} from '@/lib/settings'
 
 vi.mock('@/lib/quokka', () => ({
   // measurement = 1 → snake outcome
@@ -20,6 +26,13 @@ vi.mock('@/lib/game-helpers', async () => {
   }
 })
 
+// Debug mode is read from the URL via nuqs; mock it directly so individual
+// tests can flip the flag without touching the query-state plumbing.
+const debugModeMock = vi.fn<() => boolean>(() => false)
+vi.mock('@/hooks/use-debug-mode', () => ({
+  useDebugMode: () => debugModeMock(),
+}))
+
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
@@ -27,8 +40,33 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
+// Wrapper that pins a specific Settings value so tests can verify how the
+// runtime reads (or ignores) stored overrides.
+function makeWrapperWithSettings(overrides: Partial<Settings>) {
+  const settings: Settings = { ...DEFAULT_SETTINGS, ...overrides }
+  return function SettingsWrapper({ children }: { children: ReactNode }) {
+    const client = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    })
+    return (
+      <QueryClientProvider client={client}>
+        <SettingsContext.Provider
+          value={{
+            settings,
+            setSettings: () => {},
+            timings: resolveTimings(settings),
+          }}
+        >
+          {children}
+        </SettingsContext.Provider>
+      </QueryClientProvider>
+    )
+  }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
+  debugModeMock.mockReturnValue(false)
 })
 
 async function placeAllAndStart(
@@ -119,6 +157,128 @@ describe('useGame — collapsed snake reuses destinationCell', () => {
     // P2 should slide to the SAME destination — not a fresh random one.
     expect(result.current.state.positions[1]).toBe(firstDestination)
   }, 15000)
+})
+
+describe('useGame — tunneling through the opponent', () => {
+  async function setupBackHalfQubits(
+    result: { current: ReturnType<typeof useGame> },
+  ) {
+    const placeAt = async (configIndex: number, cell: number) => {
+      await act(async () => {
+        result.current.selectQubit(configIndex)
+      })
+      await act(async () => {
+        result.current.placeQubit(cell)
+      })
+    }
+    // Park every qubit deep in the back half so cells 2–10 stay empty.
+    await placeAt(0, 80)
+    await placeAt(1, 81)
+    await placeAt(2, 82)
+    await placeAt(3, 83)
+    await placeAt(4, 84)
+    await act(async () => {
+      result.current.confirmPass()
+    })
+    await placeAt(0, 90)
+    await placeAt(1, 91)
+    await placeAt(2, 92)
+    await placeAt(3, 93)
+    await placeAt(4, 94)
+    await act(async () => {
+      result.current.confirmPass()
+    })
+  }
+  it('lands one square past the opponent when the 10% gate passes', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper })
+    await setupBackHalfQubits(result)
+
+    // P1: 1 → 4 (no opponent on 4 yet — opponent still at 1).
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    expect(result.current.state.positions[0]).toBe(4)
+
+    // Force shouldTunnel() → true (random < 0.1).
+    vi.spyOn(Math, 'random').mockReturnValue(0.05)
+
+    // P2 rolls 3 → would land on 4 (P1's cell) → tunnels one extra step to 5.
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[1]).toBe(5)
+    })
+  })
+
+  it('stops on the opponent square when the 10% gate fails (debug on)', async () => {
+    debugModeMock.mockReturnValue(true)
+    const { result } = renderHook(() => useGame(), { wrapper })
+    await setupBackHalfQubits(result)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    expect(result.current.state.positions[0]).toBe(4)
+
+    // Force shouldTunnel() → false (random ≥ 0.1).
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[1]).toBe(4)
+    })
+  })
+
+  it('ignores a stored tunnelProbability override when debug is off', async () => {
+    // Stored override would force a tunnel every time (100%) — but with debug
+    // off the runtime must fall back to the 10% default, so a 0.5 random fails.
+    const customWrapper = makeWrapperWithSettings({ tunnelProbability: 1 })
+    const { result } = renderHook(() => useGame(), { wrapper: customWrapper })
+    await setupBackHalfQubits(result)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    expect(result.current.state.positions[0]).toBe(4)
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      // No tunnel — stored override is debug-only, default 10% wins here.
+      expect(result.current.state.positions[1]).toBe(4)
+    })
+  })
+
+  it('applies the stored tunnelProbability override when debug is on', async () => {
+    debugModeMock.mockReturnValue(true)
+    // Stored override = 1.0 → shouldTunnel short-circuits to true regardless
+    // of Math.random, so the piece must phase past the opponent.
+    const customWrapper = makeWrapperWithSettings({ tunnelProbability: 1 })
+    const { result } = renderHook(() => useGame(), { wrapper: customWrapper })
+    await setupBackHalfQubits(result)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    expect(result.current.state.positions[0]).toBe(4)
+
+    // Set Math.random high enough to fail the default 10% gate; with the
+    // override active the result should still tunnel.
+    vi.spyOn(Math, 'random').mockReturnValue(0.99)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[1]).toBe(5)
+    })
+  })
 })
 
 describe('useGame — chain reaction through already-collapsed qubits', () => {

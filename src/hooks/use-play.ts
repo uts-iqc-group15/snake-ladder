@@ -2,8 +2,15 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import { useMemoizedFn } from 'ahooks'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { TOTAL_CELLS } from '@/constants/board'
-import { computeDisplacement, rollDie, sleep } from '@/lib/game-helpers'
+import {
+  TUNNEL_PROBABILITY,
+  computeDisplacement,
+  rollDie,
+  shouldTunnel,
+  sleep,
+} from '@/lib/game-helpers'
 import { useSettings } from '@/lib/settings'
+import { useDebugMode } from '@/hooks/use-debug-mode'
 import type {
   CollapseParams,
   CollapseResult,
@@ -47,7 +54,8 @@ export function usePlay({
   slideToCell,
   collapseMutation,
 }: UsePlayDeps): PlayActions {
-  const { timings } = useSettings()
+  const { settings, timings } = useSettings()
+  const debug = useDebugMode()
 
   const handleRoll = useMemoizedFn(async (forced?: number) => {
     const snap = stateRef.current
@@ -97,8 +105,30 @@ export function usePlay({
       return
     }
 
-    const targetCell = rawTarget
-    const msg = `Rolled ${die}: cell ${currentCell} → ${targetCell}`
+    // Tunneling: if the roll lands exactly on the opponent's cell, there is a
+    // small chance the piece phases through and advances one extra square.
+    // Production play always uses the 10% default; the stored override only
+    // applies while the debug flag is on, so leaving debug doesn't carry a
+    // tweaked probability into normal games.
+    const opponent = (player === 0 ? 1 : 0) as 0 | 1
+    const opponentCell = snap.positions[opponent]
+    const tunnelProbability = debug ? settings.tunnelProbability : TUNNEL_PROBABILITY
+    const tunneled =
+      rawTarget === opponentCell &&
+      rawTarget < TOTAL_CELLS &&
+      shouldTunnel(tunnelProbability)
+
+    const targetCell = tunneled ? rawTarget + 1 : rawTarget
+    const msg = tunneled
+      ? `Rolled ${die}: tunneled through Player ${opponent + 1} at ${rawTarget} → cell ${targetCell}`
+      : `Rolled ${die}: cell ${currentCell} → ${targetCell}`
+
+    if (tunneled) {
+      addLog(
+        'info',
+        `Player ${player + 1} tunneled through Player ${opponent + 1} at cell ${rawTarget} → cell ${targetCell}`,
+      )
+    }
 
     // Dice lands on its face; pause so the player can read it before the token moves.
     setState((prev) => ({ ...prev, dice: die, message: msg }))
