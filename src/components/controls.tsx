@@ -123,11 +123,14 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
             disabled={isRolling || isCollapsing || gameOver}
             title="Shortcut: Space"
           >
-            {isCollapsing ? 'Measuring...' : (
-              <>
-                Roll Dice <span className="opacity-70 font-mono">(Space)</span>
-              </>
-            )}
+            {/* Keep a stable element tree across renders — swapping a bare
+                string for a fragment with a sibling <span> is what trips
+                React's `removeChild` crash once a translator/extension has
+                wrapped the original text nodes. */}
+            <span>{isCollapsing ? 'Measuring...' : 'Roll Dice'}</span>
+            <span className="opacity-70 font-mono">
+              {isCollapsing ? ' ' : ' (Space)'}
+            </span>
           </button>
 
           {/* Debug: fixed-step picker */}

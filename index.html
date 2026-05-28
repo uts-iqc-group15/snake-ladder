@@ -1,15 +1,24 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#b8935a" />
+    <!--
+      Prevent browser/extension auto-translation (Chrome's built-in translator,
+      Google Translate, etc.) from mutating text nodes. Translators wrap text in
+      <font> tags and rearrange children, which then causes React reconciliation
+      to throw "Failed to execute 'removeChild' on 'Node'" the next time any of
+      the rapidly-changing strings (dice value, message, player turn, button
+      label) re-renders. See: https://github.com/facebook/react/issues/11538
+    -->
+    <meta name="google" content="notranslate" />
     <title>Snakes OR Ladders</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" translate="no" class="notranslate"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
