@@ -31,6 +31,10 @@ export interface GameState {
   overshootPlayer: 0 | 1 | null
   gameOver: boolean
   logs: LogEntry[]
+  // Ordered cells each player has occupied so far. Every hop step appends a
+  // cell; snake/ladder slides append only the destination. Used to redraw the
+  // winner's journey as a dotted polyline on the post-game board.
+  paths: [number[], number[]]
 }
 
 export interface CollapseParams {

@@ -358,3 +358,135 @@ describe('useGame — chain reaction through already-collapsed qubits', () => {
     }, { timeout: 5000 })
   }, 15000)
 })
+
+describe('useGame — player path tracking', () => {
+  // Place all 10 qubits at the same low-edge cells for both players. Every
+  // placement collides, so every qubit ends up as 'interference' — landing on
+  // an interference qubit doesn't trigger collapse or sliding, which lets the
+  // tests drive players freely up the board without random detours.
+  async function setupInterferenceLowZone(
+    result: { current: ReturnType<typeof useGame> },
+  ) {
+    const placeAt = async (configIndex: number, cell: number) => {
+      await act(async () => {
+        result.current.selectQubit(configIndex)
+      })
+      await act(async () => {
+        result.current.placeQubit(cell)
+      })
+    }
+    const cells = [6, 7, 8, 9, 10]
+    for (let p = 0; p < 2; p++) {
+      for (let i = 0; i < cells.length; i++) {
+        await placeAt(i, cells[i])
+      }
+      await act(async () => {
+        result.current.confirmPass()
+      })
+    }
+  }
+
+  it('paths start at cell 1 for both players', () => {
+    const { result } = renderHook(() => useGame(), { wrapper })
+    expect(result.current.state.paths).toEqual([[1], [1]])
+  })
+
+  it('records every cell hopped through during a normal roll', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper })
+    await setupInterferenceLowZone(result)
+
+    // P1: 1 → 2 → 3 → 4 (rolled 3, no qubits in the way).
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[0]).toBe(4)
+    })
+    expect(result.current.state.paths[0]).toEqual([1, 2, 3, 4])
+    // P2 has not moved yet.
+    expect(result.current.state.paths[1]).toEqual([1])
+  })
+
+  it('captures the bounce-back detour when the roll overshoots TOTAL_CELLS', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper })
+    await setupInterferenceLowZone(result)
+
+    // Walk P1 to cell 97, then roll 6 to force a bounce off 100 back to 97.
+    await act(async () => {
+      await result.current.handleRoll(6)
+    })
+    await waitFor(() => {
+      expect(result.current.state.currentPlayer).toBe(1)
+    })
+    // P2 just inches forward to clear their turn.
+    await act(async () => {
+      await result.current.handleRoll(1)
+    })
+    await waitFor(() => {
+      expect(result.current.state.currentPlayer).toBe(0)
+    })
+
+    // Crank P1 up to cell 97 in big jumps.
+    const climb = async (step: number, expected: number) => {
+      await act(async () => {
+        await result.current.handleRoll(step)
+      })
+      await waitFor(() => {
+        expect(result.current.state.positions[0]).toBe(expected)
+      })
+      // Skip P2's turn with a 1.
+      await act(async () => {
+        await result.current.handleRoll(1)
+      })
+      await waitFor(() => {
+        expect(result.current.state.currentPlayer).toBe(0)
+      })
+    }
+    await climb(6, 13)
+    await climb(6, 19)
+    // Quickly pile P1 up to 97 — exact intermediate landings don't matter, we
+    // only care that the bounce appends both 100 and the return cell.
+    while (result.current.state.positions[0] < 97) {
+      const remaining = 97 - result.current.state.positions[0]
+      const step = Math.min(6, remaining)
+      await climb(step, result.current.state.positions[0] + step)
+    }
+    expect(result.current.state.positions[0]).toBe(97)
+
+    // Now roll 6 — overshoots, bounces.
+    await act(async () => {
+      await result.current.handleRoll(6)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[0]).toBe(97)
+    })
+
+    const path = result.current.state.paths[0]
+    // Path must include 100 (apex) followed by 99, 98, 97 on the way back.
+    const apexIdx = path.lastIndexOf(100)
+    expect(apexIdx).toBeGreaterThan(-1)
+    expect(path.slice(apexIdx)).toEqual([100, 99, 98, 97])
+  }, 20000)
+
+  it('records the tunnel destination (skipping the opponent cell intermediate)', async () => {
+    debugModeMock.mockReturnValue(true)
+    const { result } = renderHook(() => useGame(), { wrapper })
+    await setupInterferenceLowZone(result)
+
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    expect(result.current.state.paths[0]).toEqual([1, 2, 3, 4])
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.05)
+
+    // P2: 1 → 2 → 3 → 4 → 5 (tunneled past P1 at 4).
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[1]).toBe(5)
+    })
+    expect(result.current.state.paths[1]).toEqual([1, 2, 3, 4, 5])
+  })
+})

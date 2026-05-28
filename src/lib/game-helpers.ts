@@ -30,6 +30,7 @@ export const INITIAL_STATE: GameState = {
   overshootPlayer: null,
   gameOver: false,
   logs: [],
+  paths: [[1], [1]],
 }
 
 export function rollDie(): number {

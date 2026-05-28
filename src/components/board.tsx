@@ -15,6 +15,9 @@ interface BoardProps {
   slidingPlayer?: 0 | 1 | null
   overshootPlayer?: 0 | 1 | null
   onCellClick?: (cell: number) => void
+  // When the game ends, the winning player's full cell-by-cell trail. Drawn
+  // on top of the board as a dotted polyline retracing the journey.
+  winnerPath?: number[]
 }
 
 function getCellNumber(row: number, col: number): number {
@@ -53,6 +56,7 @@ export function Board({
   slidingPlayer,
   overshootPlayer,
   onCellClick,
+  winnerPath,
 }: BoardProps) {
   const cells: number[][] = []
   for (let row = 0; row < BOARD_SIZE; row++) {
@@ -247,6 +251,68 @@ export function Board({
           }),
         )}
       </div>
+
+      {/* Winner's journey: dotted polyline retracing every cell visited.
+          Rendered only on the gameover screen so live play stays uncluttered. */}
+      {phase === 'gameover' && winnerPath && winnerPath.length > 1 && (
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none z-30"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          {(() => {
+            const points = winnerPath
+              .map((cell) => {
+                const p = cellToPercent(cell)
+                return `${p.x},${p.y}`
+              })
+              .join(' ')
+            const stroke =
+              currentPlayer === 0
+                ? 'var(--color-player-1)'
+                : 'var(--color-player-2)'
+            return (
+              <>
+                {/* Soft halo for legibility against board tiles. */}
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.7)"
+                  strokeWidth="1.4"
+                  strokeOpacity="0.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Main dotted trail in the winner's color. */}
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth="0.7"
+                  strokeOpacity="0.95"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="1.4 1.6"
+                />
+                {/* Highlight the start and finish so the trail reads end-to-end. */}
+                <circle
+                  cx={cellToPercent(winnerPath[0]).x}
+                  cy={cellToPercent(winnerPath[0]).y}
+                  r="1"
+                  fill={stroke}
+                  fillOpacity="0.85"
+                />
+                <circle
+                  cx={cellToPercent(winnerPath[winnerPath.length - 1]).x}
+                  cy={cellToPercent(winnerPath[winnerPath.length - 1]).y}
+                  r="1.4"
+                  fill={stroke}
+                />
+              </>
+            )
+          })()}
+        </svg>
+      )}
 
       {/* SVG overlay for snake/ladder connections */}
       {connections.length > 0 && (

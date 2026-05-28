@@ -180,6 +180,13 @@ function App() {
             slidingPlayer={state.slidingPlayer}
             overshootPlayer={state.overshootPlayer}
             onCellClick={placeQubit}
+            // On gameover state.currentPlayer is pinned to the winner, so the
+            // winner's full journey is just paths[currentPlayer].
+            winnerPath={
+              state.phase === 'gameover'
+                ? state.paths[state.currentPlayer]
+                : undefined
+            }
           />
           <Controls
             state={state}

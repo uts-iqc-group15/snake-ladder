@@ -69,6 +69,7 @@ export function useGame(options: UseGameOptions = {}) {
       ...INITIAL_STATE,
       setupRemaining: [[...INITIAL_SETUP[0]], [...INITIAL_SETUP[1]]],
       logs: [],
+      paths: [[1], [1]],
     })
   })
 
