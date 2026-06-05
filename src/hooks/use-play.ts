@@ -3,14 +3,19 @@ import { useMemoizedFn } from 'ahooks'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { TOTAL_CELLS } from '@/constants/board'
 import {
-  TUNNEL_PROBABILITY,
   computeDisplacement,
   rollDie,
-  shouldTunnel,
   sleep,
 } from '@/lib/game-helpers'
+import { sendToQuokka } from '@/lib/quokka'
+import { simulateLocally } from '@/lib/local-sim'
+import {
+  BARRIER_THETA,
+  buildTunnelQASM,
+  computeTunnelPhase,
+  tunnelPassProbability,
+} from '@/lib/tunnel-circuit'
 import { useSettings } from '@/lib/settings'
-import { useDebugMode } from '@/hooks/use-debug-mode'
 import type {
   CollapseParams,
   CollapseResult,
@@ -54,8 +59,7 @@ export function usePlay({
   slideToCell,
   collapseMutation,
 }: UsePlayDeps): PlayActions {
-  const { settings, timings } = useSettings()
-  const debug = useDebugMode()
+  const { timings } = useSettings()
 
   const handleRoll = useMemoizedFn(async (forced?: number) => {
     const snap = stateRef.current
@@ -105,30 +109,58 @@ export function usePlay({
       return
     }
 
-    // Tunneling: if the roll lands exactly on the opponent's cell, there is a
-    // small chance the piece phases through and advances one extra square.
-    // Production play always uses the 10% default; the stored override only
-    // applies while the debug flag is on, so leaving debug doesn't carry a
-    // tweaked probability into normal games.
+    // Quantum tunneling: if the roll lands exactly on the opponent's cell the
+    // piece runs through a path-dependent interferometer circuit (ry·rz·ry).
+    // The phase φ is accumulated from the player's travel history so the same
+    // cell reached via different routes produces different passage rates —
+    // this is the path-interference (double-slit) signature that proves the
+    // mechanism is genuinely quantum rather than a biased RNG.
     const opponent = (player === 0 ? 1 : 0) as 0 | 1
     const opponentCell = snap.positions[opponent]
-    const tunnelProbability = debug ? settings.tunnelProbability : TUNNEL_PROBABILITY
-    const tunneled =
-      rawTarget === opponentCell &&
-      rawTarget < TOTAL_CELLS &&
-      shouldTunnel(tunnelProbability)
+
+    let tunneled = false
+    if (rawTarget === opponentCell && rawTarget < TOTAL_CELLS) {
+      // φ is derived from the path length *before* this hop (snap, not
+      // post-move state) so the measurement reflects the journey so far.
+      const phi = computeTunnelPhase(snap.paths[player].length)
+      const theta = BARRIER_THETA
+      const qasm = buildTunnelQASM(theta, phi)
+
+      let result: number[][]
+      try {
+        result = await sendToQuokka(qasm)
+      } catch {
+        result = simulateLocally(qasm)
+      }
+
+      tunneled = result[0][0] === 1
+
+      const pPass = tunnelPassProbability(theta, phi)
+      const isResonant = Math.cos(phi / 2) ** 2 > 0.9
+
+      addLog('qasm', qasm)
+      addLog(
+        'info',
+        `Tunnel circuit: φ=${phi.toFixed(4)} rad, P(pass)=${pPass.toFixed(4)}${isResonant ? ' [RESONANCE]' : ''}`,
+      )
+
+      if (tunneled) {
+        addLog(
+          'info',
+          `Player ${player + 1} tunneled through Player ${opponent + 1} at cell ${rawTarget} → cell ${rawTarget + 1}`,
+        )
+      } else {
+        addLog(
+          'info',
+          `Player ${player + 1} blocked at cell ${rawTarget} by Player ${opponent + 1} (destructive interference)`,
+        )
+      }
+    }
 
     const targetCell = tunneled ? rawTarget + 1 : rawTarget
     const msg = tunneled
       ? `Rolled ${die}: tunneled through Player ${opponent + 1} at ${rawTarget} → cell ${targetCell}`
       : `Rolled ${die}: cell ${currentCell} → ${targetCell}`
-
-    if (tunneled) {
-      addLog(
-        'info',
-        `Player ${player + 1} tunneled through Player ${opponent + 1} at cell ${rawTarget} → cell ${targetCell}`,
-      )
-    }
 
     // Dice lands on its face; pause so the player can read it before the token moves.
     setState((prev) => ({ ...prev, dice: die, message: msg }))

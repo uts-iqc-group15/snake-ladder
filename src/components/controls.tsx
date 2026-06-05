@@ -12,9 +12,10 @@ interface ControlsProps {
   onReset: () => void
   onSelectQubit: (configIndex: number) => void
   onRandomPlace: () => void
+  onPreviewTunnel?: () => void
 }
 
-export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace }: ControlsProps) {
+export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace, onPreviewTunnel }: ControlsProps) {
   const debug = useDebugMode()
   const {
     phase,
@@ -147,6 +148,21 @@ export function Controls({ state, onRoll, onReset, onSelectQubit, onRandomPlace 
                 </button>
               ))}
             </div>
+          )}
+
+          {/* Debug: preview the path-dependent tunnel interferometer curve
+              without moving a token. φ comes from the current player's path
+              length, so previewing after a few rolls walks the marker along
+              the interference fringe. */}
+          {debug && onPreviewTunnel && (
+            <button
+              className="py-1.5 px-3 text-xs font-mono font-bold rounded border border-[var(--color-border)] bg-transparent cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ color: '#2c4a7c' }}
+              onClick={() => onPreviewTunnel()}
+              disabled={gameOver}
+            >
+              {'⚡'} Preview tunnel circuit (φ from path)
+            </button>
           )}
         </>
       )}

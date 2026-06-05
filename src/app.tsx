@@ -20,7 +20,7 @@ function getPageFromHash(): Page {
 }
 
 function App() {
-  const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, reset } = useGame()
+  const { state, selectQubit, placeQubit, randomPlaceAll, confirmPass, handleRoll, previewTunnel, reset } = useGame()
   const [page, setPage] = useState<Page>(getPageFromHash)
   const [winOverlayDismissed, setWinOverlayDismissed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -194,6 +194,7 @@ function App() {
             onReset={() => setConfirmNewGameOpen(true)}
             onSelectQubit={selectQubit}
             onRandomPlace={randomPlaceAll}
+            onPreviewTunnel={previewTunnel}
           />
         </div>
       </div>

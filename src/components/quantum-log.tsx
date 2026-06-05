@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLatest, useMemoizedFn } from 'ahooks'
 import { CircuitDiagram } from '@/components/circuit-diagram'
+import { TunnelCurve } from '@/components/tunnel-curve'
 import type { LogEntry } from '@/hooks/use-game'
 
 interface QuantumLogProps {
@@ -132,6 +133,16 @@ export function QuantumLog({ logs }: QuantumLogProps) {
             const prefix = TYPE_PREFIX[log.type]
             const isQasm = log.type === 'qasm'
 
+            // 터널 QASM(ry·rz·ry 패턴)인 경우 φ를 추출해 곡선 표시
+            // QASM 문자열에서 rz 게이트의 각도를 파싱
+            const tunnelPhiFromQasm: number | null = (() => {
+              if (!isQasm) return null
+              const m = log.message.match(/^rz\(([-\d.]+)\)\s+q\[/m)
+              if (!m) return null
+              const val = parseFloat(m[1])
+              return Number.isFinite(val) ? val : null
+            })()
+
             return (
               <div key={i} className={isQasm ? 'my-1' : 'py-0.5'}>
                 {isQasm ? (
@@ -147,6 +158,11 @@ export function QuantumLog({ logs }: QuantumLogProps) {
                       {log.message}
                     </pre>
                     <CircuitDiagram qasm={log.message} />
+                    {tunnelPhiFromQasm !== null && (
+                      <div className="mt-1">
+                        <TunnelCurve phi={tunnelPhiFromQasm} />
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="flex gap-1.5">

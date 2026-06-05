@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useGame } from '@/hooks/use-game'
 import { sendToQuokka } from '@/lib/quokka'
+import { computeTunnelPhase } from '@/lib/tunnel-circuit'
 import {
   DEFAULT_SETTINGS,
   SettingsContext,
@@ -12,7 +13,7 @@ import {
 } from '@/lib/settings'
 
 vi.mock('@/lib/quokka', () => ({
-  // measurement = 1 → snake outcome
+  // Default: measurement = 1 → tunnel passes (used by most tests)
   sendToQuokka: vi.fn().mockResolvedValue([[1]]),
 }))
 
@@ -64,8 +65,17 @@ function makeWrapperWithSettings(overrides: Partial<Settings>) {
   }
 }
 
+beforeEach(() => {
+  // Restore the default tunnel mock so chain-reaction or other tests that
+  // override it with mockResolvedValue([[0]]) do not bleed into later tests.
+  vi.mocked(sendToQuokka).mockResolvedValue([[1]])
+})
+
 afterEach(() => {
-  vi.restoreAllMocks()
+  // resetAllMocks clears call counts AND implementations set via
+  // mockReturnValue/mockResolvedValue on vi.fn() mocks, then restores
+  // vi.spyOn stubs — preventing cross-test state leakage.
+  vi.resetAllMocks()
   debugModeMock.mockReturnValue(false)
 })
 
@@ -189,20 +199,19 @@ describe('useGame — tunneling through the opponent', () => {
       result.current.confirmPass()
     })
   }
-  it('lands one square past the opponent when the 10% gate passes', async () => {
+
+  it('lands one square past the opponent when the quantum circuit measures 1 (pass)', async () => {
+    // sendToQuokka default mock returns [[1]] → tunneled = result[0][0] === 1 = true.
     const { result } = renderHook(() => useGame(), { wrapper })
     await setupBackHalfQubits(result)
 
-    // P1: 1 → 4 (no opponent on 4 yet — opponent still at 1).
+    // P1: 1 → 4 (opponent still at 1, no tunnel condition).
     await act(async () => {
       await result.current.handleRoll(3)
     })
     expect(result.current.state.positions[0]).toBe(4)
 
-    // Force shouldTunnel() → true (random < 0.1).
-    vi.spyOn(Math, 'random').mockReturnValue(0.05)
-
-    // P2 rolls 3 → would land on 4 (P1's cell) → tunnels one extra step to 5.
+    // P2 rolls 3 → would land on 4 (P1's cell) → quantum circuit passes → cell 5.
     await act(async () => {
       await result.current.handleRoll(3)
     })
@@ -211,8 +220,10 @@ describe('useGame — tunneling through the opponent', () => {
     })
   })
 
-  it('stops on the opponent square when the 10% gate fails (debug on)', async () => {
-    debugModeMock.mockReturnValue(true)
+  it('stops on the opponent square when the quantum circuit measures 0 (blocked)', async () => {
+    // Override for this test only: measurement = 0 → destructive interference → no tunnel.
+    vi.mocked(sendToQuokka).mockResolvedValueOnce([[0]])
+
     const { result } = renderHook(() => useGame(), { wrapper })
     await setupBackHalfQubits(result)
 
@@ -220,9 +231,6 @@ describe('useGame — tunneling through the opponent', () => {
       await result.current.handleRoll(3)
     })
     expect(result.current.state.positions[0]).toBe(4)
-
-    // Force shouldTunnel() → false (random ≥ 0.1).
-    vi.spyOn(Math, 'random').mockReturnValue(0.5)
 
     await act(async () => {
       await result.current.handleRoll(3)
@@ -232,10 +240,11 @@ describe('useGame — tunneling through the opponent', () => {
     })
   })
 
-  it('ignores a stored tunnelProbability override when debug is off', async () => {
-    // Stored override would force a tunnel every time (100%) — but with debug
-    // off the runtime must fall back to the 10% default, so a 0.5 random fails.
-    const customWrapper = makeWrapperWithSettings({ tunnelProbability: 1 })
+  it('tunnel outcome is determined by the quantum circuit, not a classical probability setting', async () => {
+    // The quantum circuit measurement governs the outcome. measurement=0 → blocked.
+    vi.mocked(sendToQuokka).mockResolvedValueOnce([[0]])
+
+    const customWrapper = makeWrapperWithSettings({})
     const { result } = renderHook(() => useGame(), { wrapper: customWrapper })
     await setupBackHalfQubits(result)
 
@@ -243,23 +252,20 @@ describe('useGame — tunneling through the opponent', () => {
       await result.current.handleRoll(3)
     })
     expect(result.current.state.positions[0]).toBe(4)
-
-    vi.spyOn(Math, 'random').mockReturnValue(0.5)
 
     await act(async () => {
       await result.current.handleRoll(3)
     })
     await waitFor(() => {
-      // No tunnel — stored override is debug-only, default 10% wins here.
+      // Quantum circuit returned 0 → no tunnel.
       expect(result.current.state.positions[1]).toBe(4)
     })
   })
 
-  it('applies the stored tunnelProbability override when debug is on', async () => {
-    debugModeMock.mockReturnValue(true)
-    // Stored override = 1.0 → shouldTunnel short-circuits to true regardless
-    // of Math.random, so the piece must phase past the opponent.
-    const customWrapper = makeWrapperWithSettings({ tunnelProbability: 1 })
+  it('tunnel always fires when quantum circuit measures 1, regardless of path length', async () => {
+    // Verifies that any path length still results in a tunnel when measurement=1.
+    // sendToQuokka default mock returns [[1]].
+    const customWrapper = makeWrapperWithSettings({})
     const { result } = renderHook(() => useGame(), { wrapper: customWrapper })
     await setupBackHalfQubits(result)
 
@@ -268,9 +274,28 @@ describe('useGame — tunneling through the opponent', () => {
     })
     expect(result.current.state.positions[0]).toBe(4)
 
-    // Set Math.random high enough to fail the default 10% gate; with the
-    // override active the result should still tunnel.
-    vi.spyOn(Math, 'random').mockReturnValue(0.99)
+    // Quantum circuit drives the outcome.
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    await waitFor(() => {
+      expect(result.current.state.positions[1]).toBe(5)
+    })
+  })
+
+  it('encodes the path-dependent phase φ in the QASM sent to Quokka (path interference)', async () => {
+    // The tunnel circuit phase is derived from the player's accumulated path
+    // length BEFORE the hop, so the same collision cell produces a different
+    // rz(φ) depending on the route taken — the double-slit signature that a
+    // classical RNG cannot reproduce.
+    const { result } = renderHook(() => useGame(), { wrapper })
+    await setupBackHalfQubits(result)
+
+    // P1 → cell 4. P2 is still at cell 1, so P2's path length before its hop is 1.
+    await act(async () => {
+      await result.current.handleRoll(3)
+    })
+    expect(result.current.state.positions[0]).toBe(4)
 
     await act(async () => {
       await result.current.handleRoll(3)
@@ -278,12 +303,29 @@ describe('useGame — tunneling through the opponent', () => {
     await waitFor(() => {
       expect(result.current.state.positions[1]).toBe(5)
     })
+
+    // The last QASM measured by Quokka is the tunnel circuit. Its rz(φ) must
+    // equal computeTunnelPhase(P2 path length before the hop = 1), proving the
+    // circuit is driven by the journey, not a fixed bias.
+    const calls = vi.mocked(sendToQuokka).mock.calls
+    const lastQasm = calls[calls.length - 1][0] as string
+    const rzMatch = lastQasm.match(/rz\(([-\d.]+)\)/)
+    expect(rzMatch).not.toBeNull()
+    const sentPhi = parseFloat(rzMatch![1])
+    const expectedPhi = computeTunnelPhase(1)
+    expect(sentPhi).toBeCloseTo(expectedPhi, 4)
+
+    // And a different path length yields a different φ — so different routes to
+    // the same cell would send a different circuit (path interference).
+    expect(computeTunnelPhase(1)).not.toBeCloseTo(computeTunnelPhase(4), 4)
   })
 })
 
 describe('useGame — chain reaction through already-collapsed qubits', () => {
   it('second player landing on a collapsed cell chains through subsequent collapsed cells', async () => {
-    // Single-qubit measurement = 0 → ladder
+    // Single-qubit measurement = 0 → ladder outcome for collapse.
+    // Use mockResolvedValue (persistent) intentionally for this test only;
+    // beforeEach will restore the default [[1]] before the next test.
     vi.mocked(sendToQuokka).mockResolvedValue([[0]])
 
     const seed = Array.from({ length: 500 }, (_, k) => ((k * 41 + 17) % 100) / 100)
@@ -469,18 +511,18 @@ describe('useGame — player path tracking', () => {
   }, 20000)
 
   it('records the tunnel destination (skipping the opponent cell intermediate)', async () => {
-    debugModeMock.mockReturnValue(true)
+    // sendToQuokka default mock returns [[1]] → quantum tunnel passes.
+    // No Math.random mock needed: outcome is driven by quantum measurement alone.
     const { result } = renderHook(() => useGame(), { wrapper })
     await setupInterferenceLowZone(result)
 
+    // P1: 1 → 2 → 3 → 4.
     await act(async () => {
       await result.current.handleRoll(3)
     })
     expect(result.current.state.paths[0]).toEqual([1, 2, 3, 4])
 
-    vi.spyOn(Math, 'random').mockReturnValue(0.05)
-
-    // P2: 1 → 2 → 3 → 4 → 5 (tunneled past P1 at 4).
+    // P2: 1 → 2 → 3 → 4 → 5 (quantum circuit passes, tunneled past P1 at 4).
     await act(async () => {
       await result.current.handleRoll(3)
     })

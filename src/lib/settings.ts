@@ -6,15 +6,11 @@ export type DiceSpeed = 'slow' | 'normal' | 'fast'
 export interface Settings {
   movementSpeed: MovementSpeed
   diceSpeed: DiceSpeed
-  // Probability (0–1) that a piece phases through the opponent when landing on
-  // the same cell. Exposed via the debug-only control in the settings modal.
-  tunnelProbability: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   movementSpeed: 'normal',
   diceSpeed: 'normal',
-  tunnelProbability: 0.1,
 }
 
 const MOVEMENT_HOP_MS: Record<MovementSpeed, number> = {

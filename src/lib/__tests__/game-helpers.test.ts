@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  TUNNEL_PROBABILITY,
-  computeDisplacement,
-  shouldTunnel,
-} from '@/lib/game-helpers'
+import { computeDisplacement } from '@/lib/game-helpers'
 
 // Silent log collector — matches the addLog signature used in production.
 function makeLogger(): (type: string, message: string) => void {
@@ -110,36 +106,6 @@ describe('computeDisplacement — ladder directionality invariant', () => {
     const result = computeDisplacement('ladder', 50, makeLogger())
     expect(result).toBeGreaterThan(50)
     expect(result).toBeLessThanOrEqual(100)
-  })
-})
-
-describe('shouldTunnel — configurable probability gate', () => {
-  it('uses the default 10% when no argument is supplied (inside window)', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(TUNNEL_PROBABILITY - 0.0001)
-    expect(shouldTunnel()).toBe(true)
-  })
-
-  it('uses the default 10% when no argument is supplied (outside window)', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(TUNNEL_PROBABILITY)
-    expect(shouldTunnel()).toBe(false)
-  })
-
-  it('respects a custom probability when supplied', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.4)
-    expect(shouldTunnel(0.5)).toBe(true)
-    expect(shouldTunnel(0.3)).toBe(false)
-  })
-
-  it('short-circuits to false at 0 without consuming randomness', () => {
-    const spy = vi.spyOn(Math, 'random')
-    expect(shouldTunnel(0)).toBe(false)
-    expect(spy).not.toHaveBeenCalled()
-  })
-
-  it('short-circuits to true at 1 without consuming randomness', () => {
-    const spy = vi.spyOn(Math, 'random')
-    expect(shouldTunnel(1)).toBe(true)
-    expect(spy).not.toHaveBeenCalled()
   })
 })
 
