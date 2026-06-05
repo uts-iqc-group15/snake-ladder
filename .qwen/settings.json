@@ -1,0 +1,88 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "name": "keyword-detector",
+            "type": "command",
+            "command": "bun \"$QWEN_PROJECT_DIR/.qwen/hooks/keyword-detector.ts\"",
+            "timeout": 5
+          },
+          {
+            "name": "state-boundary",
+            "type": "command",
+            "command": "bun \"$QWEN_PROJECT_DIR/.qwen/hooks/state-boundary.ts\"",
+            "timeout": 5
+          },
+          {
+            "name": "skill-injector",
+            "type": "command",
+            "command": "bun \"$QWEN_PROJECT_DIR/.qwen/hooks/skill-injector.ts\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "name": "test-filter",
+            "type": "command",
+            "command": "bun \"$QWEN_PROJECT_DIR/.qwen/hooks/test-filter.ts\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "name": "persistent-mode",
+            "type": "command",
+            "command": "bun \"$QWEN_PROJECT_DIR/.qwen/hooks/persistent-mode.ts\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "ui": {
+    "statusLine": {
+      "type": "command",
+      "command": "bun \"$QWEN_PROJECT_DIR/.qwen/hooks/hud.ts\""
+    }
+  },
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--no-usage-statistics",
+        "--isolated"
+      ]
+    },
+    "serena": {
+      "command": "serena",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project",
+        ".",
+        "--open-web-dashboard",
+        "false"
+      ],
+      "env": {
+        "SERENA_LOG_LEVEL": "info"
+      }
+    }
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  }
+}

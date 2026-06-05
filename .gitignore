@@ -26,3 +26,12 @@ dist-ssr
 
 # MCP / agent tooling
 .serena/
+
+# oh-my-agent runtime (local artifacts — do not commit)
+.antigravitycli/
+.agents/results/
+.agents/state/
+
+# Local tooling backups (auto-generated — do not commit)
+.agents/.backup-*/
+*.backup-*

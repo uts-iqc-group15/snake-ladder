@@ -1,35 +1,48 @@
 {
   "project_name": "snake-ladder",
-  "description": "Sarah's 4-qubit entanglement circuit reimplementation + first-row snake displacement bug fix",
+  "description": "경로 의존 양자 터널링 재구현 — 'tunnelling/interference handled classically' 감점 해결. 고전 Math.random() 터널을 간섭계 회로(ry·rz·ry)로 교체하고, 위상 φ를 플레이어가 지나온 경로에서 누적해 같은 칸도 도달 경로에 따라 통과율이 달라지게 한다(이중슬릿/경로 간섭).",
+  "design_doc": "docs/plans/quantum-tunneling-design.md",
   "tech_stack": {
     "frontend": "React 19 + TypeScript + Vite + Tailwind 4 + ahooks + react-query + Vitest",
-    "backend": "n/a (client-side game; calls Quokka quantum simulator HTTP API)",
+    "backend": "n/a (client-side game; calls Quokka quantum simulator HTTP API, local-sim.ts fallback)",
     "mobile": "n/a",
     "database": "n/a",
     "infrastructure": "GitHub Pages (auto-deploy via .github/workflows/deploy.yml on push to main)"
   },
+  "module_contracts": [
+    {
+      "file": "src/lib/tunnel-circuit.ts",
+      "exports": [
+        "buildTunnelQASM(theta: number, phi: number): string — OPENQASM 2.0, single qubit, ry(theta)·rz(phi)·ry(theta)·measure",
+        "computeTunnelPhase(pathLength: number): number — (pathLength * STEP_PHASE) mod 2π",
+        "tunnelPassProbability(theta: number, phi: number): number — sin^2(theta) * cos^2(phi/2), for UI curve",
+        "const STEP_PHASE = Math.PI / 4",
+        "const BARRIER_THETA: number — default barrier thickness (wall 1겹)"
+      ]
+    }
+  ],
   "architecture_decisions": [
     {
-      "decision": "Expand biased Bell strategy to 4 qubits (q0/q1 biased pair for visibility, q2/q3 pure Bell pair for type)",
-      "rationale": "Sarah's full design separates two concerns: q0/q1 decide whether each tile of an entangled pair appears (independent flags with biased marginals), q2/q3 in a |Φ+⟩ Bell state decide snake/ladder type with perfect correlation so both tiles are always the same type",
+      "decision": "터널링을 단일 큐빗 간섭계 ry(θ)·rz(φ)·ry(θ)로 구현하고 통과확률을 P = sin²θ·cos²(φ/2)로 둔다",
+      "rationale": "두 번의 ry(부분 반사) 사이 rz(φ)가 보강/상쇄 간섭을 만들어 φ에 따라 통과율이 출렁인다. 이 한 회로가 터널링과 간섭 감점을 동시에 해결한다.",
       "alternatives_considered": [
-        "Keep 2-qubit circuit and reinterpret bits — rejected because actual cirq notebook screenshot shows 4 qubits",
-        "Run separate 2-qubit measurements per tile — rejected because partner type must be Bell-correlated with player tile"
+        "단일 ry→measure — 기각: 위상 의존 출렁임이 없어 또다시 편향 난수가 됨",
+        "2큐빗 이중장벽 모델 — 기각: 초기 범위 과대, 단일 큐빗 간섭계로 충분히 공명 표현"
       ]
     },
     {
-      "decision": "Partner tile is preset to collapsed state ('snake'/'ladder'/'interference') at first measurement instead of staying uncollapsed",
-      "rationale": "With 4-qubit circuit, m2 already determines both tiles' type at first measurement (Bell correlation). Re-running the 4-qubit circuit when partner is later visited would discard that information. Presetting partner to its determined type lets use-play.ts's existing 'collapsed qubit landed-on' branch fire correctly.",
+      "decision": "φ를 GameState.paths[player].length × (π/4)로 누적하고 2π로 wrap한다",
+      "rationale": "paths가 이미 존재해 별도 상태가 거의 불필요. 같은 칸이라도 도달 경로(칸 수)가 다르면 φ가 달라 통과율이 달라짐 = 경로 간섭(이중슬릿) 증명. 터널 판정은 hop 이전 시점의 snap.paths[player].length를 사용한다.",
       "alternatives_considered": [
-        "Leave partner uncollapsed and re-measure on visit — rejected: breaks Bell correlation"
+        "주사위 눈 기반 φ — 기각: 경로 의존성(주사위 불가능 증명)이 약함",
+        "보드 위치(두 토큰 거리) 기반 φ — 후보였으나 경로 의존성 데모가 칸 수 누적보다 약함"
       ]
     },
     {
-      "decision": "Snake outcome must guarantee newCell < targetCell (and ladder must guarantee newCell > targetCell)",
-      "rationale": "Current computeDisplacement clamps row at edges (row 0 for snake, row 9 for ladder), so dy can become 0 and dx-only motion can move the player UP after a snake (e.g., 6 → 8). Fix: post-check and fall back to safe value.",
+      "decision": "Quokka 실패 시 local-sim.ts로 폴백(ry·rz 이미 지원)하고 rollDie() 고전 폴백을 제거한다",
+      "rationale": "폴백마저 주사위라는 감점을 없앤다. local-sim이 동일 회로를 양자 시뮬레이션한다.",
       "alternatives_considered": [
-        "Re-roll dice until valid — rejected: nondeterministic and complicates animations",
-        "Disallow entangled qubits in row 0 — rejected: too restrictive"
+        "rollDie 폴백 유지 — 기각: 양자 경로의 고전 대체물이라는 감점 원인"
       ]
     }
   ],
@@ -37,91 +50,97 @@
     {
       "id": "task-1",
       "agent": "frontend",
-      "title": "Implement Sarah's 4-qubit biased Bell circuit + split semantics",
-      "description": "Update src/lib/entanglement-strategy.ts, src/hooks/use-collapse.ts, src/types/game.ts (if needed), and src/constants/board.ts to implement Sarah's full 4-qubit circuit. q0/q1 retain the existing biased gates (Ry(1.580) q[1], Ry(0.862) q[0], Z q[1], Rz(0.720) q[0], H q[0], CNOT q[0]→q[1]) and now solely decide visibility flags per tile. q2/q3 form a fresh Bell pair (H q[2], CNOT q[2]→q[3]) deciding the shared snake/ladder type. parseResult must take 4 measurement bits and return { playerOutcome, partnerOutcome } where: m0=0 → player tile fires (type from m2), m0=1 → player tile cancelled (interference); m1=0 → partner preset to type from m2 (collapsed snake or ladder), m1=1 → partner cancelled (interference). Bit-ordering convention: result[0][i] = c[i] = q[i] measurement. Update describe()/log lines so Quokka log shows the 4-qubit circuit and explains the new mapping. Keep basicBellStrategy unchanged in semantics but its parseResult must accept the wider signature (extra bits ignored).",
+      "title": "tunnel-circuit.ts 모듈 + 단위 테스트 생성",
+      "description": "src/lib/tunnel-circuit.ts 신규 생성. buildTunnelQASM(theta, phi)는 OPENQASM 2.0 단일 큐빗 회로 'ry(θ) q[0]; rz(φ) q[0]; ry(θ) q[0]; measure q[0]->c[0];'를 반환(local-sim.ts/qasm 정규식과 호환되는 포맷, 숫자는 toFixed로 고정). computeTunnelPhase(pathLength)는 (pathLength*STEP_PHASE) mod 2π. tunnelPassProbability(theta,phi)는 sin²θ·cos²(φ/2)(UI 곡선·로그용). 상수 STEP_PHASE=π/4, BARRIER_THETA(벽 1겹 기본값). src/lib/__tests__/tunnel-circuit.test.ts로 공식·QASM 포맷·wrap 검증.",
       "priority": 0,
       "dependencies": [],
-      "estimated_complexity": "medium",
+      "estimated_complexity": "low",
       "acceptance_criteria": [
-        "Quokka receives a 4-qubit QASM with q0/q1 biased pair and q2/q3 H+CNOT pair",
-        "parseResult returns playerOutcome based on m0+m2 and partnerOutcome based on m1+m2",
-        "When m0=0 the player slides per snake/ladder (type=m2)",
-        "When m0=1 player tile is interference (no movement) but partner can still be set per m1",
-        "When m1=0 the partner qubit is immediately collapsed to 'snake' or 'ladder' (matching m2) so the next player to land triggers the existing collapsed-tile branch in use-play.ts",
-        "When m1=1 partner is collapsed to 'interference'",
-        "EntanglementStrategy.parseResult signature accepts 4 measurement bits (m2/m3 optional for basicBell)",
-        "Quokka log shows: full 4-qubit QASM, circuit diagram, mapping description (q0=player visible, q1=partner visible, q2=q3=type)",
-        "bun run typecheck passes",
-        "bun run test passes",
-        "Existing use-game.test.tsx still passes (non-entangled qubit flow unaffected)"
+        "buildTunnelQASM 출력이 local-sim.ts parseProgram으로 파싱 가능(ry/rz/measure 정규식 일치)",
+        "tunnelPassProbability(θ,0) === sin²θ (최대), tunnelPassProbability(θ,π) ≈ 0 (막힘)",
+        "computeTunnelPhase는 항상 [0,2π) 범위",
+        "bun run test 통과 (신규 tunnel-circuit.test.ts 포함)"
       ],
       "artifacts_expected": [
-        "src/lib/entanglement-strategy.ts",
-        "src/hooks/use-collapse.ts",
-        "src/constants/board.ts (only if entangledParams shape changes)"
-      ],
-      "scope": [
-        "src/lib/entanglement-strategy.ts",
-        "src/hooks/use-collapse.ts",
-        "src/types/game.ts (read-only — no changes expected)",
-        "src/constants/board.ts (entangledParams)"
+        "src/lib/tunnel-circuit.ts",
+        "src/lib/__tests__/tunnel-circuit.test.ts"
       ]
     },
     {
       "id": "task-2",
-      "agent": "debug",
-      "title": "Fix first-row snake placing player at higher cell (and symmetric top-row ladder bug)",
-      "description": "src/lib/game-helpers.ts:computeDisplacement — when targetCell is on row 0 and outcome is 'snake', dy gets clamped to 0 by clamp(coord.row + dy, 0, 9). Then a positive dx still moves the player to a higher cell number on row 0 (e.g., 6 → 8). Same symmetry bug likely exists for ladder on row 9. Fix: after computing newCell, if outcome === 'snake' && newCell >= targetCell, fall back to max(1, targetCell - 1). If outcome === 'ladder' && newCell <= targetCell, fall back to min(TOTAL_CELLS, targetCell + 1). Add log entries explaining the clamp ('Snake clamped: would have moved to N which is not lower than M'). Add unit tests covering: row-0 snake from cell 1, 5, 10; row-9 ladder from cell 91, 95, 100; mid-board cases unaffected.",
+      "agent": "frontend",
+      "title": "use-play.ts 터널 분기를 양자 회로 측정으로 교체",
+      "description": "use-play.ts의 터널 판정(108-131행)을 교체. opponentCell 일치 조건은 유지하되, shouldTunnel(prob) 대신: φ=computeTunnelPhase(snap.paths[player].length), qasm=buildTunnelQASM(θ, φ), result=await sendToQuokka(qasm)(try/catch로 실패 시 simulateLocally 폴백), tunneled = result[0][0]===1. handleRoll은 이미 async이므로 await 사용. 로그(addLog)에 φ, P(통과), 공명 여부, QASM 추가. rollDie 고전 폴백 경로 제거. Strict-Mode 중복 측정 방지(기존 패턴 참고).",
+      "priority": 0,
+      "dependencies": ["task-1"],
+      "estimated_complexity": "medium",
+      "acceptance_criteria": [
+        "터널 발동 시 buildTunnelQASM QASM이 sendToQuokka로 전송됨",
+        "Quokka 실패 시 simulateLocally로 동일 회로 측정(rollDie 미사용)",
+        "φ가 hop 이전 시점 snap.paths[player].length에서 계산됨",
+        "터널 로그에 φ값·P(통과)·공명여부·QASM 표시",
+        "bun run typecheck 통과, 기존 use-game.test.tsx 흐름 깨지지 않음"
+      ],
+      "artifacts_expected": [
+        "src/hooks/use-play.ts"
+      ]
+    },
+    {
+      "id": "task-3",
+      "agent": "frontend",
+      "title": "고전 터널 함수 제거 및 설정 정리",
+      "description": "game-helpers.ts에서 shouldTunnel/TUNNEL_PROBABILITY 제거. settings.ts의 tunnelProbability 및 settings-modal.tsx 디버그 슬라이더를 θ(벽 두께, BARRIER_THETA) 조절 UI로 전환(또는 제거). 관련 import 정리. game-helpers.test.ts에서 shouldTunnel 테스트 제거/갱신.",
       "priority": 1,
-      "dependencies": [],
+      "dependencies": ["task-2"],
       "estimated_complexity": "low",
       "acceptance_criteria": [
-        "computeDisplacement returns newCell < targetCell whenever outcome === 'snake'",
-        "computeDisplacement returns newCell > targetCell whenever outcome === 'ladder' (when targetCell < TOTAL_CELLS)",
-        "Fallback clamp is logged via addLog so the Quokka log explains the adjustment",
-        "New unit tests in src/lib/__tests__/game-helpers.test.ts (or hooks/__tests__) covering row-0 snake and row-9 ladder edge cases",
-        "bun run typecheck passes",
-        "bun run test passes (existing + new tests)"
+        "game-helpers.ts에 Math.random 기반 터널 코드 없음",
+        "settings 디버그 UI가 θ 조절로 동작하거나 제거됨",
+        "bun run typecheck·test 통과(끊긴 import 없음)"
       ],
       "artifacts_expected": [
         "src/lib/game-helpers.ts",
-        "src/lib/__tests__/game-helpers.test.ts (new)"
-      ],
-      "scope": [
-        "src/lib/game-helpers.ts",
-        "src/lib/__tests__/"
+        "src/lib/settings.ts",
+        "src/components/settings-modal.tsx",
+        "src/lib/__tests__/game-helpers.test.ts"
       ]
-    }
-  ],
-  "api_contracts": [],
-  "data_models": [
-    {
-      "entity": "EntanglementParsed",
-      "fields": {
-        "playerOutcome": "'snake' | 'ladder' | 'interference'",
-        "partnerOutcome": "'snake' | 'ladder' | 'interference' | null"
-      }
     },
     {
-      "entity": "QubitConfig.entangledParams",
-      "fields": {
-        "thetaA": "number (Ry on q[0])",
-        "thetaB": "number (Ry on q[1])",
-        "phase": "number (Rz on q[0])"
-      }
+      "id": "task-4",
+      "agent": "frontend",
+      "title": "양자성 증명 UI — 통과확률 출렁임 곡선 + 공명 배지",
+      "description": "P(통과) vs φ 곡선을 그리는 컴포넌트 추가(tunnelPassProbability로 [0,2π) 샘플링), 현재 φ 위치 점 표시, 공명(φ≈2πn) 시 배지. 터널 발동 시 quantum-log/circuit-diagram 영역에 노출. CircuitDiagram(ket)이 ry·rz QASM을 렌더 가능한지 확인하고, 불가 시 텍스트 회로 폴백.",
+      "priority": 1,
+      "dependencies": ["task-2"],
+      "estimated_complexity": "medium",
+      "acceptance_criteria": [
+        "같은 칸이라도 φ가 다르면 곡선 위 현재 점 위치가 다르게 표시됨",
+        "φ≈2πn일 때 공명 배지가 뜸",
+        "터널 시도 시 회로와 곡선이 화면에 함께 보임"
+      ],
+      "artifacts_expected": [
+        "src/components/tunnel-curve.tsx",
+        "src/components/quantum-log.tsx"
+      ]
+    },
+    {
+      "id": "task-5",
+      "agent": "qa",
+      "title": "검증 — 테스트·회귀·경로 의존 데모",
+      "description": "tunnel-circuit/local-sim 단위 테스트 보강, use-game.test.tsx 터널 관련 갱신. bun run typecheck·test·build 전체 통과 확인. 데모 시나리오 수동 검증: 동일 칸을 서로 다른 경로(칸 수)로 도달 시 통과율(곡선 위 점)이 달라짐, Quokka 차단 시 local-sim 폴백 동작.",
+      "priority": 2,
+      "dependencies": ["task-3", "task-4"],
+      "estimated_complexity": "low",
+      "acceptance_criteria": [
+        "bun run typecheck·test·build 모두 통과",
+        "경로 의존 통과율 변화가 재현됨",
+        "Quokka 실패 시 local-sim 양자 폴백 확인",
+        "Math.random/rollDie 기반 터널 경로가 코드에서 사라짐(grep 확인)"
+      ],
+      "artifacts_expected": [
+        "src/lib/__tests__/local-sim.test.ts",
+        "src/hooks/__tests__/use-game.test.tsx"
+      ]
     }
-  ],
-  "non_functional_requirements": {
-    "security": [],
-    "performance": [
-      "4-qubit measurement adds 2 qubits; Quokka latency unchanged"
-    ],
-    "scalability": []
-  },
-  "testing_strategy": {
-    "unit_tests": "vitest — new tests for computeDisplacement edge cases; existing use-game.test.tsx must remain green",
-    "integration_tests": "manual: roll a die that lands on entangled cell, verify Quokka log shows 4-qubit circuit + correct partner preset behavior",
-    "e2e_tests": "n/a",
-    "performance_tests": "n/a"
-  }
+  ]
 }
